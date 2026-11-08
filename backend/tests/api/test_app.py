@@ -1,0 +1,91 @@
+"""The HTTP API streams the flow as Server-Sent Events. The model is mocked."""
+
+import asyncio
+import json
+import threading
+
+import anthropic
+import httpx
+from fastapi.testclient import TestClient
+
+from gift_genius.api.app import BUSY_MESSAGE, create_app, describe_error, search_events
+from gift_genius.client import ConfigError
+from gift_genius.orchestrator import GiftError
+
+from fakes import get, good_reply, resp, search, settings, text
+
+SECRET = "sk-test-SECRET-123"
+
+
+def parse(body: str):
+    events = []
+    for block in body.strip().split("\n\n"):
+        lines = block.split("\n")
+        if lines[0].startswith(":"):
+            continue
+        name = lines[0].removeprefix("event: ")
+        events.append((name, json.loads(lines[1].removeprefix("data: "))))
+    return events
+
+
+def post(app, payload):
+    with TestClient(app) as client:
+        return client.post("/api/gift-searches", json=payload)
+
+
+def test_streams_every_event_kind_in_order():
+    script = [resp(text("outdoors")), resp(search("hiking", 50)), resp(get("out-007")), good_reply()]
+    app = create_app(lambda: settings(script))
+    response = post(app, {"description": "Loves hiking", "budget": 50})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    names = [n for n, _ in parse(response.text)]
+    assert names == ["routed", "searching", "checking", "validated", "shortlist", "done"]
+    shortlist = parse(response.text)[4][1]
+    assert len(shortlist["gifts"]) == 3 and shortlist["removed"] == [] and shortlist["problems"] == []
+
+
+def test_bad_requests_are_rejected():
+    app = create_app(lambda: settings([]))
+    for payload in ({"description": "  ", "budget": 50}, {"description": "x", "budget": 0},
+                    {"description": "x" * 1001, "budget": 50}, {"description": "x"}, {"budget": 50}):
+        assert post(app, payload).status_code == 422
+
+
+def test_errors_become_an_error_event_without_secrets():
+    def factory():
+        raise ConfigError("no key")
+
+    events = parse(post(create_app(factory), {"description": "x", "budget": 20}).text)
+    assert events == [("error", {"message": describe_error(ConfigError())})]
+
+
+def test_api_errors_never_leak_the_key():
+    request = httpx.Request("POST", "https://api.test")
+    error = anthropic.AuthenticationError(f"bad key {SECRET}", response=httpx.Response(401, request=request), body=None)
+    s = settings([error])
+    s.client.messages.create = lambda **kw: (_ for _ in ()).throw(error)
+    body = post(create_app(lambda: s), {"description": "x", "budget": 20}).text
+    assert SECRET not in body
+    assert parse(body) == [("error", {"message": "The Claude API key in .env was rejected."})]
+
+
+def test_gift_error_message_is_shown():
+    assert describe_error(GiftError("Describe the person.")) == "Describe the person."
+    assert "went wrong" in describe_error(RuntimeError(SECRET))
+
+
+def test_busy_when_all_slots_are_taken():
+    slots = threading.BoundedSemaphore(1)
+    slots.acquire()
+
+    async def collect():
+        return [c async for c in search_events("x", 20, lambda: settings([]), slots=slots)]
+
+    [chunk] = asyncio.run(collect())
+    assert BUSY_MESSAGE in chunk
+
+
+def test_health():
+    with TestClient(create_app(lambda: settings([]))) as client:
+        assert client.get("/api/health").json() == {"ok": True}

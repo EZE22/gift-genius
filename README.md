@@ -1,0 +1,139 @@
+# Gift Genius
+
+Describe the person you're buying for, enter a budget, and get three gift ideas from a
+60-item catalog, each one checked by code before you see it. Two front ends share one back end:
+a React web app and a command-line app.
+
+## Pattern
+
+**A routing workflow whose specialists are autonomous agents.** Gift requests fall into a few
+clear categories (tech, outdoors, food), so one fast LLM call picks the category and plain code
+picks the matching specialist, with a General agent as the fallback. But how to search the
+catalog for a particular person can't be known in advance, so each specialist is an autonomous
+agent that chooses its own searches, capped at 6 tool calls. Its shortlist is structured data,
+and code checks it against the catalog and the budget before anyone sees it.
+
+```mermaid
+flowchart TD
+    U["Describe the person + budget"] -->|"Sends: description"| R["LLM router<br/>One call, one label"]
+    R -->|"Returns: outdoors"| C["Your code picks the agent<br/>Lookup, with a fallback"]
+    C -.->|skipped| T["Tech agent"]
+    C -->|"Passes request"| O["Outdoors agent<br/>Autonomous: own steps"]
+    C -.->|skipped| F["Foodie agent"]
+    O <-->|"Loops until done"| TL["Tools<br/>search_catalog, get_item"]
+    O -->|"Returns: 3 gifts"| S["Gift shortlist<br/>JSON: name, price, link"]
+    S --> V["Your code checks<br/>Under budget, valid links<br/>Fails? Retry once"]
+    V -->|Passes| UI["Shown to the user"]
+    classDef llm fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef agent fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef code fill:#F1EFE8,stroke:#5F5E5A,color:#444441
+    class R llm
+    class O,T,F agent
+    class U,C,TL,S,V,UI code
+```
+
+**Legend:** green is a single LLM call, purple is an autonomous agent, and gray is code or data.
+The web app's activity feed uses the same colours for its "LLM call", "Agent" and "Code" tags.
+
+### The steps, and where they live
+
+| Step | Kind | Code |
+|---|---|---|
+| 1. Description and budget (a separate number) | code | `frontend/web`, `frontend/cli` |
+| 2. Router returns one label: `tech`, `outdoors` or `foodie` | one LLM call (`ROUTER_MODEL`) | `backend/src/gift_genius/router.py` |
+| 3. Label → agent; unknown labels fall back to General | code | `orchestrator.pick_agent` |
+| 4. Specialist loops with `search_catalog` and `get_item`, at most 6 tool calls | autonomous agent | `agent.py` (generic loop), `agents/` (one file per agent), `tools/` (one file per tool) |
+| 5. Shortlist as JSON: `item_id`, `name`, `price`, `link`, `reason` | data | `agents/specialist.py` (the format) |
+| 6. Checks: exactly 3 gifts, ids in the catalog, prices at or under budget, links match the catalog. On failure, the agent runs once more with the specific problems. On a second failure, only the gifts that passed are shown, with the reasons the others were removed. | code | `validation.py`, `orchestrator.find_gifts` |
+| 7. Show the result | code | web gift cards, CLI list |
+
+A few details:
+- The checks also catch a price that doesn't match the catalog, a gift listed twice, and a gift with no reason.
+- Gifts that pass are rebuilt from the catalog, so the name, price and link always come from the catalog. Only the reason comes from the agent.
+- The retry gets a fresh budget of 6 tool calls.
+- The catalog is `backend/src/gift_genius/data/catalog.json`. The tools read only this file.
+
+## Setup
+
+You need Python 3.10+ and Node 20+.
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e "backend[dev]"
+.venv/bin/pip install -e "frontend/cli[dev]"
+cd frontend/web && npm install
+```
+
+`backend[dev]` includes the API dependencies. The API itself is the optional `api` extra, so a
+CLI-only install (`pip install -e backend -e frontend/cli`) doesn't pull in FastAPI.
+
+Copy `.env.example` to `.env` at the repository root and fill in either `ANTHROPIC_API_KEY`
+(Claude API) or the `ANTHROPIC_FOUNDRY_*` settings (Microsoft Foundry). Optionally set
+`ROUTER_MODEL` to a fast model (Claude API: e.g. `claude-haiku-5-5`; Foundry: a deployment name).
+If it's empty, the router uses the main model. `.env` is git-ignored, and the key never leaves the back end.
+
+## Run
+
+CLI:
+
+```bash
+.venv/bin/gift-genius
+```
+
+```bash
+.venv/bin/gift-genius --budget 40 "My dad makes espresso every morning and bakes bread on Sundays"
+```
+
+Web: start the API (port 8001) and the dev server (port 5174), then open http://127.0.0.1:5174.
+
+```bash
+.venv/bin/gift-genius-api
+```
+
+```bash
+npm --prefix frontend/web run dev
+```
+
+The API listens on 127.0.0.1 only and allows 3 searches at once. It has no authentication, so
+don't expose it beyond this machine without adding some.
+
+## API
+
+`POST /api/gift-searches` with `{"description": "...", "budget": 50}` streams Server-Sent Events:
+
+| Event | Data |
+|---|---|
+| `routed` | `label`, `agent`, `fallback` |
+| `searching` | `attempt`, `query`, `max_price`, `matches` (one per `search_catalog` call) |
+| `checking` | `attempt`, `item_id`, `found`, `name` (one per `get_item` call) |
+| `validated` | `attempt`, `ok`, `problems`, `will_retry` |
+| `shortlist` | `label`, `agent`, `attempts`, `gifts`, `removed`, `problems` |
+| `done` | `{}` |
+| `error` | `message` (safe to show; never contains secrets) |
+
+## Tests
+
+The model is mocked in every test.
+
+```bash
+cd backend && ../.venv/bin/pytest
+```
+
+```bash
+cd frontend/cli && ../../.venv/bin/pytest
+```
+
+```bash
+cd frontend/web && npm test
+```
+
+## Layout
+
+```
+backend/            gift-genius-backend (import name gift_genius)
+  src/gift_genius/  __init__.py (public API), agent.py, router.py, orchestrator.py, validation.py,
+                    client.py, errors.py, agents/, tools/, api/, data/catalog.json
+  tests/            mirrors src/gift_genius/
+frontend/web/       gift-genius-web: Vite, React, TypeScript
+frontend/cli/       gift-genius-cli (import name gift_genius_cli): the gift-genius command
+```

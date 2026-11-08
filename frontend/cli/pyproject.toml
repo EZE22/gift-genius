@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# The command-line front end. It provides the gift-genius command and uses only
+# the back end's public API (the names exported by gift_genius).
+# Install the back end first: pip install -e ../../backend
+[project]
+name = "gift-genius-cli"
+version = "0.1.0"
+description = "Gift Genius in the terminal: describe a person, set a budget, get three checked gift ideas."
+requires-python = ">=3.10"
+dependencies = [
+    "gift-genius-backend",  # from ../../backend, without the [api] extra
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.2.0"]
+
+[project.scripts]
+gift-genius = "gift_genius_cli.__main__:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

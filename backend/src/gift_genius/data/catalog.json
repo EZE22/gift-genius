@@ -1,0 +1,484 @@
+{
+  "items": [
+    {
+      "id": "tech-001",
+      "name": "Pocket Bluetooth Speaker",
+      "category": "tech",
+      "price": 38.99,
+      "description": "Palm-sized waterproof speaker with 12-hour battery for music anywhere.",
+      "link": "https://gifts.example.com/item/tech-001"
+    },
+    {
+      "id": "tech-002",
+      "name": "Noise-Cancelling Headphones",
+      "category": "tech",
+      "price": 188.99,
+      "description": "Over-ear wireless headphones with active noise cancelling for travel and focus.",
+      "link": "https://gifts.example.com/item/tech-002"
+    },
+    {
+      "id": "tech-003",
+      "name": "Wireless Earbuds",
+      "category": "tech",
+      "price": 78.99,
+      "description": "Compact true-wireless earbuds with charging case and clear calls.",
+      "link": "https://gifts.example.com/item/tech-003"
+    },
+    {
+      "id": "tech-004",
+      "name": "Mechanical Keyboard",
+      "category": "tech",
+      "price": 118.99,
+      "description": "Tactile mechanical keyboard with hot-swap switches for typing and gaming.",
+      "link": "https://gifts.example.com/item/tech-004"
+    },
+    {
+      "id": "tech-005",
+      "name": "Ergonomic Wireless Mouse",
+      "category": "tech",
+      "price": 58.99,
+      "description": "Sculpted wireless mouse that eases wrist strain during long workdays.",
+      "link": "https://gifts.example.com/item/tech-005"
+    },
+    {
+      "id": "tech-006",
+      "name": "Smart Plug Two-Pack",
+      "category": "tech",
+      "price": 23.99,
+      "description": "Wi-Fi smart plugs to schedule lamps and appliances from a phone; smart home starter.",
+      "link": "https://gifts.example.com/item/tech-006"
+    },
+    {
+      "id": "tech-007",
+      "name": "Smart Bulb Starter Kit",
+      "category": "tech",
+      "price": 48.99,
+      "description": "Color-changing smart light bulbs with app and voice control for the smart home.",
+      "link": "https://gifts.example.com/item/tech-007"
+    },
+    {
+      "id": "tech-008",
+      "name": "E-Reader with Backlight",
+      "category": "tech",
+      "price": 138.99,
+      "description": "Glare-free e-ink reader that holds thousands of books, for avid readers.",
+      "link": "https://gifts.example.com/item/tech-008"
+    },
+    {
+      "id": "tech-009",
+      "name": "Fitness Tracker Band",
+      "category": "tech",
+      "price": 68.99,
+      "description": "Slim band tracking steps, heart rate and sleep with week-long battery.",
+      "link": "https://gifts.example.com/item/tech-009"
+    },
+    {
+      "id": "tech-010",
+      "name": "Smartwatch",
+      "category": "tech",
+      "price": 248.99,
+      "description": "Smartwatch with GPS, notifications, workouts and contactless payments.",
+      "link": "https://gifts.example.com/item/tech-010"
+    },
+    {
+      "id": "tech-011",
+      "name": "Portable Power Bank 20000mAh",
+      "category": "tech",
+      "price": 44.99,
+      "description": "High-capacity battery pack that charges a phone several times; travel essential.",
+      "link": "https://gifts.example.com/item/tech-011"
+    },
+    {
+      "id": "tech-012",
+      "name": "Instant Print Camera",
+      "category": "tech",
+      "price": 98.99,
+      "description": "Camera that prints credit-card-size photos on the spot for parties and photography fun.",
+      "link": "https://gifts.example.com/item/tech-012"
+    },
+    {
+      "id": "tech-013",
+      "name": "Mirrorless Camera Starter Lens",
+      "category": "tech",
+      "price": 218.99,
+      "description": "Bright 35mm prime lens for mirrorless cameras, great for portrait photography.",
+      "link": "https://gifts.example.com/item/tech-013"
+    },
+    {
+      "id": "tech-014",
+      "name": "Retro Handheld Game Console",
+      "category": "tech",
+      "price": 88.99,
+      "description": "Handheld gaming console loaded with classic-style indie games.",
+      "link": "https://gifts.example.com/item/tech-014"
+    },
+    {
+      "id": "tech-015",
+      "name": "Gaming Headset",
+      "category": "tech",
+      "price": 73.99,
+      "description": "Comfortable gaming headset with surround sound and a detachable microphone.",
+      "link": "https://gifts.example.com/item/tech-015"
+    },
+    {
+      "id": "tech-016",
+      "name": "Mini Drone with Camera",
+      "category": "tech",
+      "price": 128.99,
+      "description": "Beginner-friendly foldable drone that films HD video and holds steady in a breeze.",
+      "link": "https://gifts.example.com/item/tech-016"
+    },
+    {
+      "id": "tech-017",
+      "name": "Wireless Charging Stand",
+      "category": "tech",
+      "price": 33.99,
+      "description": "Charging stand that powers a phone upright on a desk or nightstand.",
+      "link": "https://gifts.example.com/item/tech-017"
+    },
+    {
+      "id": "tech-018",
+      "name": "Laptop Stand Aluminium",
+      "category": "tech",
+      "price": 41.99,
+      "description": "Adjustable aluminium laptop stand that raises the screen to eye level.",
+      "link": "https://gifts.example.com/item/tech-018"
+    },
+    {
+      "id": "tech-019",
+      "name": "Smart Speaker with Display",
+      "category": "tech",
+      "price": 98.99,
+      "description": "Voice assistant speaker with a screen for recipes, video calls and the smart home.",
+      "link": "https://gifts.example.com/item/tech-019"
+    },
+    {
+      "id": "tech-020",
+      "name": "Mechanical Puzzle Robot Kit",
+      "category": "tech",
+      "price": 63.99,
+      "description": "Build-and-code robot kit that teaches programming basics to curious tinkerers.",
+      "link": "https://gifts.example.com/item/tech-020"
+    },
+    {
+      "id": "out-001",
+      "name": "Ultralight Hiking Daypack",
+      "category": "outdoors",
+      "price": 78.99,
+      "description": "20-litre ventilated daypack for day hikes with hydration sleeve.",
+      "link": "https://gifts.example.com/item/out-001"
+    },
+    {
+      "id": "out-002",
+      "name": "Trekking Poles Pair",
+      "category": "outdoors",
+      "price": 58.99,
+      "description": "Collapsible carbon trekking poles that save knees on steep hiking trails.",
+      "link": "https://gifts.example.com/item/out-002"
+    },
+    {
+      "id": "out-003",
+      "name": "Two-Person Backpacking Tent",
+      "category": "outdoors",
+      "price": 228.99,
+      "description": "Lightweight freestanding tent for backpacking and camping trips.",
+      "link": "https://gifts.example.com/item/out-003"
+    },
+    {
+      "id": "out-004",
+      "name": "Down Sleeping Bag",
+      "category": "outdoors",
+      "price": 188.99,
+      "description": "Packable down sleeping bag rated to 30 degrees for camping.",
+      "link": "https://gifts.example.com/item/out-004"
+    },
+    {
+      "id": "out-005",
+      "name": "Camping Hammock with Straps",
+      "category": "outdoors",
+      "price": 44.99,
+      "description": "Parachute-nylon hammock with tree straps for camping and lazy afternoons.",
+      "link": "https://gifts.example.com/item/out-005"
+    },
+    {
+      "id": "out-006",
+      "name": "Headlamp Rechargeable",
+      "category": "outdoors",
+      "price": 31.99,
+      "description": "Bright rechargeable headlamp with red night mode for camping and running at dusk.",
+      "link": "https://gifts.example.com/item/out-006"
+    },
+    {
+      "id": "out-007",
+      "name": "Insulated Water Bottle",
+      "category": "outdoors",
+      "price": 28.99,
+      "description": "Steel bottle that keeps drinks cold for 24 hours on hikes and rides.",
+      "link": "https://gifts.example.com/item/out-007"
+    },
+    {
+      "id": "out-008",
+      "name": "Backpacking Stove Kit",
+      "category": "outdoors",
+      "price": 68.99,
+      "description": "Compact canister stove with pot for boiling water at camp in minutes.",
+      "link": "https://gifts.example.com/item/out-008"
+    },
+    {
+      "id": "out-009",
+      "name": "Camp Chair Compact",
+      "category": "outdoors",
+      "price": 54.99,
+      "description": "Packable camp chair that sets up in seconds for festivals and campsites.",
+      "link": "https://gifts.example.com/item/out-009"
+    },
+    {
+      "id": "out-010",
+      "name": "Trail Running Vest",
+      "category": "outdoors",
+      "price": 84.99,
+      "description": "Snug running vest with soft flasks for long trail runs.",
+      "link": "https://gifts.example.com/item/out-010"
+    },
+    {
+      "id": "out-011",
+      "name": "Cycling Bike Light Set",
+      "category": "outdoors",
+      "price": 37.99,
+      "description": "USB-rechargeable front and rear bike lights for safe cycling commutes.",
+      "link": "https://gifts.example.com/item/out-011"
+    },
+    {
+      "id": "out-012",
+      "name": "Bike Multi-Tool",
+      "category": "outdoors",
+      "price": 25.99,
+      "description": "Pocket multi-tool with hex keys and chain breaker for roadside cycling repairs.",
+      "link": "https://gifts.example.com/item/out-012"
+    },
+    {
+      "id": "out-013",
+      "name": "Climbing Chalk Bag Set",
+      "category": "outdoors",
+      "price": 27.99,
+      "description": "Chalk bag with belt and refillable chalk for climbing and bouldering.",
+      "link": "https://gifts.example.com/item/out-013"
+    },
+    {
+      "id": "out-014",
+      "name": "Kayak Dry Bag 20L",
+      "category": "outdoors",
+      "price": 23.99,
+      "description": "Roll-top waterproof dry bag for kayaking, paddleboarding and boat days.",
+      "link": "https://gifts.example.com/item/out-014"
+    },
+    {
+      "id": "out-015",
+      "name": "Binoculars 8x42",
+      "category": "outdoors",
+      "price": 148.99,
+      "description": "Waterproof binoculars for birdwatching, hiking and wildlife spotting.",
+      "link": "https://gifts.example.com/item/out-015"
+    },
+    {
+      "id": "out-016",
+      "name": "Gardening Tool Set",
+      "category": "outdoors",
+      "price": 48.99,
+      "description": "Five-piece stainless garden tool set with canvas tote for gardeners.",
+      "link": "https://gifts.example.com/item/out-016"
+    },
+    {
+      "id": "out-017",
+      "name": "Raised Garden Bed Kit",
+      "category": "outdoors",
+      "price": 118.99,
+      "description": "Cedar raised bed kit for growing vegetables and herbs in the garden.",
+      "link": "https://gifts.example.com/item/out-017"
+    },
+    {
+      "id": "out-018",
+      "name": "Yoga Mat Natural Rubber",
+      "category": "outdoors",
+      "price": 67.99,
+      "description": "Grippy natural rubber yoga mat for home practice and stretching.",
+      "link": "https://gifts.example.com/item/out-018"
+    },
+    {
+      "id": "out-019",
+      "name": "National Parks Pass Holder Map",
+      "category": "outdoors",
+      "price": 18.99,
+      "description": "Scratch-off map of national parks to track every outdoor adventure.",
+      "link": "https://gifts.example.com/item/out-019"
+    },
+    {
+      "id": "out-020",
+      "name": "Packable Rain Jacket",
+      "category": "outdoors",
+      "price": 98.99,
+      "description": "Waterproof breathable rain jacket that stuffs into its own pocket for hiking and travel.",
+      "link": "https://gifts.example.com/item/out-020"
+    },
+    {
+      "id": "food-001",
+      "name": "Pour-Over Coffee Kit",
+      "category": "foodie",
+      "price": 47.99,
+      "description": "Ceramic dripper, gooseneck kettle and filters for slow coffee mornings.",
+      "link": "https://gifts.example.com/item/food-001"
+    },
+    {
+      "id": "food-002",
+      "name": "Burr Coffee Grinder",
+      "category": "foodie",
+      "price": 128.99,
+      "description": "Conical burr grinder with 30 settings for espresso to French press coffee.",
+      "link": "https://gifts.example.com/item/food-002"
+    },
+    {
+      "id": "food-003",
+      "name": "Single-Origin Coffee Sampler",
+      "category": "foodie",
+      "price": 35.99,
+      "description": "Four bags of freshly roasted single-origin coffee beans from small farms.",
+      "link": "https://gifts.example.com/item/food-003"
+    },
+    {
+      "id": "food-004",
+      "name": "Loose-Leaf Tea Collection",
+      "category": "foodie",
+      "price": 31.99,
+      "description": "Twelve loose-leaf teas with an infuser, from green to smoky black tea.",
+      "link": "https://gifts.example.com/item/food-004"
+    },
+    {
+      "id": "food-005",
+      "name": "Matcha Whisk Set",
+      "category": "foodie",
+      "price": 38.99,
+      "description": "Bamboo whisk, scoop and bowl with ceremonial-grade matcha tea.",
+      "link": "https://gifts.example.com/item/food-005"
+    },
+    {
+      "id": "food-006",
+      "name": "Chef's Knife 8-Inch",
+      "category": "foodie",
+      "price": 94.99,
+      "description": "Balanced high-carbon steel chef's knife for everyday cooking.",
+      "link": "https://gifts.example.com/item/food-006"
+    },
+    {
+      "id": "food-007",
+      "name": "Cast Iron Skillet 10-Inch",
+      "category": "foodie",
+      "price": 41.99,
+      "description": "Pre-seasoned cast iron skillet for searing, baking and campfire cooking.",
+      "link": "https://gifts.example.com/item/food-007"
+    },
+    {
+      "id": "food-008",
+      "name": "Dutch Oven Enamelled",
+      "category": "foodie",
+      "price": 158.99,
+      "description": "Enamelled cast iron Dutch oven for braises, stews and bread baking.",
+      "link": "https://gifts.example.com/item/food-008"
+    },
+    {
+      "id": "food-009",
+      "name": "Sourdough Starter Kit",
+      "category": "foodie",
+      "price": 33.99,
+      "description": "Live starter, banneton basket and scoring lame for home sourdough baking.",
+      "link": "https://gifts.example.com/item/food-009"
+    },
+    {
+      "id": "food-010",
+      "name": "Stand Mixer Compact",
+      "category": "foodie",
+      "price": 248.99,
+      "description": "Tilt-head stand mixer for bread, cakes and cookie baking.",
+      "link": "https://gifts.example.com/item/food-010"
+    },
+    {
+      "id": "food-011",
+      "name": "Hot Sauce Making Kit",
+      "category": "foodie",
+      "price": 28.99,
+      "description": "Dried chillies, bottles and recipes to brew your own fermented hot sauce.",
+      "link": "https://gifts.example.com/item/food-011"
+    },
+    {
+      "id": "food-012",
+      "name": "Artisan Cheese Board Set",
+      "category": "foodie",
+      "price": 57.99,
+      "description": "Acacia board, cheese knives and slate labels for hosting cheese nights.",
+      "link": "https://gifts.example.com/item/food-012"
+    },
+    {
+      "id": "food-013",
+      "name": "Olive Oil Tasting Trio",
+      "category": "foodie",
+      "price": 43.99,
+      "description": "Three estate olive oils with tasting notes for dipping and finishing.",
+      "link": "https://gifts.example.com/item/food-013"
+    },
+    {
+      "id": "food-014",
+      "name": "Spice Blend Library",
+      "category": "foodie",
+      "price": 37.99,
+      "description": "Sixteen small-batch spice blends for cooking dishes from around the world.",
+      "link": "https://gifts.example.com/item/food-014"
+    },
+    {
+      "id": "food-015",
+      "name": "Wine Aerator and Stopper Set",
+      "category": "foodie",
+      "price": 26.99,
+      "description": "Pourer that aerates wine plus vacuum stoppers to keep bottles fresh.",
+      "link": "https://gifts.example.com/item/food-015"
+    },
+    {
+      "id": "food-016",
+      "name": "Cocktail Shaker Set",
+      "category": "foodie",
+      "price": 51.99,
+      "description": "Weighted shaker, jigger, strainer and muddler for home cocktail bartending.",
+      "link": "https://gifts.example.com/item/food-016"
+    },
+    {
+      "id": "food-017",
+      "name": "Pasta Maker Machine",
+      "category": "foodie",
+      "price": 74.99,
+      "description": "Hand-crank pasta roller and cutter for fresh fettuccine and lasagne.",
+      "link": "https://gifts.example.com/item/food-017"
+    },
+    {
+      "id": "food-018",
+      "name": "Chocolate Tasting Box",
+      "category": "foodie",
+      "price": 30.99,
+      "description": "Twelve craft chocolate bars from bean-to-bar makers with tasting cards.",
+      "link": "https://gifts.example.com/item/food-018"
+    },
+    {
+      "id": "food-019",
+      "name": "Cookbook of Regional Street Food",
+      "category": "foodie",
+      "price": 34.99,
+      "description": "Illustrated cookbook of street food recipes from twenty cities.",
+      "link": "https://gifts.example.com/item/food-019"
+    },
+    {
+      "id": "food-020",
+      "name": "Sous Vide Precision Cooker",
+      "category": "foodie",
+      "price": 128.99,
+      "description": "Wi-Fi sous vide stick for perfectly cooked steak, eggs and fish.",
+      "link": "https://gifts.example.com/item/food-020"
+    }
+  ]
+}

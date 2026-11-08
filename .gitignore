@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Packaging
+*.egg-info/
+build/
+dist/
+
+# Web front end
+node_modules/
+*.tsbuildinfo
+
+# macOS
+.DS_Store

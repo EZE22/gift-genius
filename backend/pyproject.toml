@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# The back end: the router, the specialist agents, the catalog tools, the
+# shortlist checks and the orchestrator. Front ends use only its public API,
+# the names exported from gift_genius/__init__.py.
+[project]
+name = "gift-genius-backend"
+version = "0.1.0"
+description = "Gift Genius back end: a routing workflow whose specialists are autonomous gift-finding agents."
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=2.6.0",
+    "python-dotenv>=1.2.4",
+]
+
+[project.optional-dependencies]
+# The HTTP API (gift_genius.api). A CLI-only install leaves these out.
+api = [
+    "fastapi>=0.162",
+    "uvicorn>=0.54",
+]
+dev = [
+    "gift-genius-backend[api]",
+    "pytest>=9.2.0",
+    "httpx>=0.28",  # FastAPI's TestClient
+]
+
+[project.scripts]
+gift-genius-api = "gift_genius.api:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gift_genius = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
