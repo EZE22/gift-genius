@@ -19,7 +19,11 @@ SCHEMA = {
 
 
 def run(tool_input: dict) -> tuple[str, bool]:
-    """Returns (result text, is_error)."""
+    """Look up one id. Returns (JSON for the model, is_error).
+
+    A missing or unknown id is an error. The model is told to take the id from
+    a search result rather than invent one.
+    """
     item_id = tool_input.get("item_id")
     if not isinstance(item_id, str) or not item_id.strip():
         return "item_id must be a non-empty string.", True

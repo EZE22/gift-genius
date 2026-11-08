@@ -6,6 +6,7 @@ from gift_genius import CHECKING, ROUTED, SEARCHING, SHORTLIST, VALIDATED
 
 
 def money(value) -> str:
+    """Format a dollar amount. A value that is not a number becomes '?'."""
     try:
         return f"${float(value):,.2f}"
     except (TypeError, ValueError):
@@ -23,7 +24,12 @@ def parse_budget(text: str) -> float | None:
 
 
 def format_event(kind: str, data: dict) -> str | None:
-    """One activity-feed line, or None for events shown another way."""
+    """One activity-feed line, or None for events shown another way.
+
+    The shortlist event is skipped here because format_result prints the cards.
+    Any other unknown kind is also skipped, so a newer server event cannot
+    crash an older CLI.
+    """
     retry = "  (retry) " if data.get("attempt", 1) > 1 else "  "
     if kind == ROUTED:
         if data["fallback"]:
@@ -59,6 +65,8 @@ def format_result(result) -> str:
     else:
         lines.append("No gift ideas passed the checks.")
     if not result.complete:
+        # Each removed gift already explains itself. `other` is what is left:
+        # problems about the shortlist as a whole, such as the wrong count.
         lines += ["", "Some suggestions were removed after two tries:"]
         for removed in result.removed:
             lines.append(f"  - {removed.name}: {'; '.join(removed.reasons)}")

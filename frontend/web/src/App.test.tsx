@@ -1,3 +1,6 @@
+// The page, driven by a fake startSearch. No server is involved. Each describe
+// is one part of the journey: empty form, live feed, cards, errors, New search.
+
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -34,6 +37,7 @@ const GIFTS = [
 ];
 const FULL: Shortlist = { label: "outdoors", agent: "Outdoors", attempts: 1, gifts: GIFTS, removed: [], problems: [] };
 
+/** Render the page, type a person and a budget, and click Find gifts. */
 async function fillAndSubmit(description = "Loves hiking", budget = "50") {
   const fake = fakeSearches();
   const user = userEvent.setup();
@@ -44,6 +48,7 @@ async function fillAndSubmit(description = "Loves hiking", budget = "50") {
   return { ...fake, user };
 }
 
+/** Fill the form and play a complete successful stream, then wait for the promise to resolve. */
 async function runWhole(shortlist: Shortlist = FULL) {
   const ctx = await fillAndSubmit();
   const run = ctx.last();
@@ -58,6 +63,7 @@ async function runWhole(shortlist: Shortlist = FULL) {
 }
 
 describe("1. empty state and form", () => {
+  // Before a search, the page explains the three steps and keeps Find gifts disabled.
   it("shows how it works before any search", () => {
     render(<App startSearch={fakeSearches().startSearch} />);
     expect(screen.getByRole("heading", { name: "How it works" })).toBeInTheDocument();
@@ -98,6 +104,7 @@ describe("1. empty state and form", () => {
 });
 
 describe("2. loading and the live activity feed", () => {
+  // While the stream is open the form is locked and each event becomes a tagged line.
   it("disables the form and shows progress while running", async () => {
     await fillAndSubmit();
     expect(screen.getByRole("button", { name: "Finding gifts…" })).toBeDisabled();
@@ -137,6 +144,7 @@ describe("2. loading and the live activity feed", () => {
 });
 
 describe("3. results", () => {
+  // done moves focus to the cards. A partial shortlist still shows what passed and why the rest did not.
   it("shows three gift cards with name, price, reason and link, and moves focus to them", async () => {
     await runWhole();
     const heading = screen.getByRole("heading", { name: "Three gift ideas" });
@@ -175,6 +183,7 @@ describe("3. results", () => {
 });
 
 describe("4. errors", () => {
+  // An error event or a rejected startSearch shows the message and Try again.
   it("shows a server error event with Try again, which reruns the same request", async () => {
     const { last, runs, user } = await fillAndSubmit();
     last().emit({ type: "error", message: "The Claude API returned an error (529). Try again in a moment." });
@@ -196,6 +205,7 @@ describe("4. errors", () => {
 });
 
 describe("5. New search", () => {
+  // New search clears the form and the results, and aborts a search that is still running.
   it("resets everything and focuses the description", async () => {
     const { user } = await runWhole();
     await user.click(screen.getByRole("button", { name: "New search" }));

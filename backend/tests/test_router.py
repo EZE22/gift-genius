@@ -8,6 +8,7 @@ from fakes import resp, settings, text
 
 
 def test_one_call_to_the_router_model_returns_the_label():
+    """One request, to the router model, with no tools, and the description inside a tag."""
     s = settings([resp(text("outdoors"))])
     assert route(s, "Loves hiking") == "outdoors"
     [(api, request)] = s.client.requests
@@ -20,13 +21,16 @@ def test_one_call_to_the_router_model_returns_the_label():
 @pytest.mark.parametrize("reply,label", [("Tech.", "tech"), ("  FOODIE\n", "foodie"), ("outdoors - hikes", "outdoors"),
                                          ("books", "books"), ("", "")])
 def test_normalize(reply, label):
+    """The label is the first word, lowercased, with punctuation stripped."""
     assert normalize(reply) == label
 
 
 def test_refusal_gives_no_label():
+    """A refusal is an empty label, which the orchestrator treats as the General fallback."""
     s = settings([resp(stop_reason="refusal")])
     assert route(s, "x") == ""
 
 
 def test_labels_are_the_three_categories():
+    """The only labels the router is asked to return. pick_agent's map must match this tuple."""
     assert LABELS == ("tech", "outdoors", "foodie")

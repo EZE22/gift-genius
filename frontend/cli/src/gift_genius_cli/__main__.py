@@ -23,6 +23,7 @@ from .ui import format_event, format_result, parse_budget
 
 
 def ask_description(ask: Callable[[str], str], out: TextIO) -> str:
+    """Prompt until the text is non-empty and within the length limit."""
     while True:
         text = ask("Describe the person you're buying for: ").strip()
         if text and len(text) <= MAX_DESCRIPTION_LENGTH:
@@ -31,6 +32,7 @@ def ask_description(ask: Callable[[str], str], out: TextIO) -> str:
 
 
 def ask_budget(ask: Callable[[str], str], out: TextIO) -> float:
+    """Prompt until the line parses as a budget inside the allowed range."""
     while True:
         value = parse_budget(ask("Budget per gift, in dollars: "))
         if value is not None and 1 <= value <= MAX_BUDGET:
@@ -39,6 +41,11 @@ def ask_budget(ask: Callable[[str], str], out: TextIO) -> float:
 
 
 def main(argv=None, ask: Callable[[str], str] = input, out: TextIO = sys.stdout, settings_factory=make_client) -> int:
+    """Run one search. Returns a process exit code: 0 ok, 1 failed, 130 cancelled.
+
+    Tests pass argv, a fake ask, a StringIO, and a settings_factory so this
+    never reads the real .env or calls a model.
+    """
     parser = argparse.ArgumentParser(prog="gift-genius", description="Find three gift ideas for someone, within a budget.")
     parser.add_argument("description", nargs="?", help="who the gift is for")
     parser.add_argument("--budget", help="budget per gift in dollars, e.g. 50")
@@ -46,6 +53,8 @@ def main(argv=None, ask: Callable[[str], str] = input, out: TextIO = sys.stdout,
 
     print("Gift Genius\n", file=out)
     try:
+        # Missing or blank arguments fall through to a prompt. A budget that
+        # was given but does not parse is reported, then the prompt takes over.
         description = args.description.strip() if args.description and args.description.strip() else ask_description(ask, out)
         budget = parse_budget(args.budget) if args.budget else None
         if budget is None or not 1 <= budget <= MAX_BUDGET:
@@ -59,6 +68,7 @@ def main(argv=None, ask: Callable[[str], str] = input, out: TextIO = sys.stdout,
     print("\nFinding gifts...", file=out)
 
     def on_event(kind: str, data: dict) -> None:
+        # flush so a long model call still shows each line as it happens.
         line = format_event(kind, data)
         if line:
             print(line, file=out, flush=True)

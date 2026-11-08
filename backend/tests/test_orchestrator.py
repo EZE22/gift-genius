@@ -9,6 +9,7 @@ from fakes import GOOD_OUTDOORS, get, gift, good_reply, resp, search, settings, 
 
 
 def run(script, description="Loves hiking and camping", budget=50):
+    """Run find_gifts against a scripted model and collect the progress events."""
     events = []
     s = settings(script)
     result = find_gifts(s, description, budget, lambda kind, data: events.append((kind, data)))
@@ -16,16 +17,19 @@ def run(script, description="Loves hiking and camping", budget=50):
 
 
 def kinds(events):
+    """Just the event names, in the order they were emitted."""
     return [k for k, _ in events]
 
 
 @pytest.mark.parametrize("label,agent", [("tech", TECH), ("outdoors", OUTDOORS), ("foodie", FOODIE),
                                          ("books", GENERAL), ("", GENERAL), ("Tech", GENERAL)])
 def test_code_maps_labels_to_agents_with_a_fallback(label, agent):
+    """tech, outdoors and foodie map to those specialists. Anything else is General."""
     assert pick_agent(label) is agent
 
 
 def test_happy_path_routes_searches_checks_and_returns_three_gifts():
+    """A clean run emits routed, searching, checking, validated, shortlist, and three gifts."""
     result, events, requests = run([
         resp(text("outdoors")),
         resp(search("hiking", 50)),
@@ -47,6 +51,7 @@ def test_happy_path_routes_searches_checks_and_returns_three_gifts():
 
 
 def test_unknown_label_falls_back_to_general():
+    """A label outside the three categories still runs, using the General prompt."""
     result, events, requests = run([resp(text("books")), good_reply()])
     assert events[0][1] == {"label": "books", "agent": "General", "fallback": True}
     assert requests[1][1]["system"] == GENERAL.system
@@ -54,6 +59,7 @@ def test_unknown_label_falls_back_to_general():
 
 
 def test_agent_is_capped_at_six_tool_calls():
+    """The seventh model request forbids tools, after six searches have been reported."""
     script = [resp(text("outdoors"))] + [resp(search(f"q{i}", 50, id=f"s{i}")) for i in range(6)] + [good_reply()]
     result, events, requests = run(script)
     assert kinds(events).count("searching") == 6
@@ -62,6 +68,7 @@ def test_agent_is_capped_at_six_tool_calls():
 
 
 def test_failed_check_retries_once_with_the_specific_problems():
+    """A failed shortlist is sent back once, with the checker's wording in the next prompt."""
     bad = resp(text(shortlist(gift("out-007"), gift("out-006"), gift("tech-002"))))  # $188.99 headphones
     result, events, requests = run([resp(text("outdoors")), bad, good_reply()])
     assert kinds(events) == ["routed", "validated", "validated", "shortlist"]
@@ -76,6 +83,7 @@ def test_failed_check_retries_once_with_the_specific_problems():
 
 
 def test_second_failure_shows_the_gifts_that_passed_and_why_others_were_removed():
+    """After two failures the result keeps the gifts that passed and lists the removals."""
     bad1 = resp(text(shortlist(gift("out-007"), gift("out-006"), gift("tech-002"))))
     bad2 = resp(text(shortlist(gift("out-007"), gift("out-006"), gift("out-012", link="https://x.test"))))
     result, events, _ = run([resp(text("outdoors")), bad1, bad2])
@@ -91,6 +99,7 @@ def test_second_failure_shows_the_gifts_that_passed_and_why_others_were_removed(
 
 
 def test_unknown_item_and_retry_use_fresh_tool_budget():
+    """A retry is a new agent run, so it gets its own six tool calls."""
     bad = resp(text(shortlist(gift("out-007"), gift("out-006"),
                               {"item_id": "out-404", "name": "Ghost", "price": 9, "link": "x", "reason": "r"})))
     script = [resp(text("outdoors")), resp(get("out-404")), bad, resp(search("bike", 50)), good_reply()]
@@ -105,6 +114,7 @@ def test_unknown_item_and_retry_use_fresh_tool_budget():
 @pytest.mark.parametrize("description,budget", [("  ", 50), ("x" * 1001, 50), ("ok", 0), ("ok", 0.5),
                                                 ("ok", 10_001), ("ok", True), ("ok", "50")])
 def test_bad_requests_stop_before_any_model_call(description, budget):
+    """Blank text, an oversized description, and a bad budget never reach the model."""
     s = settings([])
     with pytest.raises(GiftError):
         find_gifts(s, description, budget)
@@ -112,5 +122,6 @@ def test_bad_requests_stop_before_any_model_call(description, budget):
 
 
 def test_agent_that_cannot_finish_is_a_gift_error():
+    """An agent loop failure becomes a GiftError that names the agent, not the raw exception."""
     with pytest.raises(GiftError, match="Outdoors agent couldn't finish"):
         run([resp(text("outdoors")), resp(stop_reason="max_tokens")])

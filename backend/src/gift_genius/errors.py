@@ -15,7 +15,13 @@ GENERIC_MESSAGE = "Something went wrong. Try again in a moment."
 
 
 def describe_error(error: Exception) -> str:
-    """A message that is safe to show: it never includes secrets or raw exception text."""
+    """A message that is safe to show: it never includes secrets or raw exception text.
+
+    GiftError is the one case whose own text is shown, because this code wrote
+    it. Every other branch uses a fixed sentence. The HTTP status is included
+    for API errors; the response body is not, because a provider message can
+    echo part of a request.
+    """
     if isinstance(error, GiftError):
         return str(error)
     if isinstance(error, ConfigError):
@@ -32,7 +38,13 @@ def describe_error(error: Exception) -> str:
 
 
 def log_failure(error: Exception) -> None:
-    """Log why a search ended, without exception text that could hold secrets."""
+    """Log why a search ended, without exception text that could hold secrets.
+
+    Known API and config failures log only the exception type (and status
+    code). An unexpected error uses log.exception so the traceback is kept
+    for debugging; that path is the one place a message might include a secret,
+    and it stays in the server log, never in the response.
+    """
     if isinstance(error, GiftError):
         log.info("Search stopped: %s", error)
     elif isinstance(error, anthropic.APIStatusError):

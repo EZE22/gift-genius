@@ -1,9 +1,13 @@
+// The search form. The parent owns the text; this component decides when the
+// Find gifts button is enabled and shows a budget error once the field is non-empty.
+
 import { forwardRef, useId } from "react";
 
 export const MAX_DESCRIPTION = 1000;
 export const MAX_BUDGET = 10_000;
 
 export function parseBudget(text: string): number | null {
+  // "$1,200" and "50" both count. Blank, non-numeric, and out-of-range do not.
   const value = Number(text.trim().replace(/[$,]/g, ""));
   return text.trim() && Number.isFinite(value) && value >= 1 && value <= MAX_BUDGET ? value : null;
 }
@@ -22,6 +26,8 @@ export const SearchForm = forwardRef<HTMLTextAreaElement, Props>(function Search
   descriptionRef,
 ) {
   const id = useId();
+  // useId keeps the label and the error text tied to this form even if two
+  // copies were on the page. The button stays disabled until both fields parse.
   const budgetValue = parseBudget(budget);
   const budgetInvalid = budget.trim() !== "" && budgetValue === null;
   const ready = description.trim() !== "" && budgetValue !== null && !busy;

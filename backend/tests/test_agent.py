@@ -31,6 +31,7 @@ ADD_TOOL = {
 
 
 def add(a, b, id):
+    """One scripted call of the fake add tool."""
     return tool("add", {"a": a, "b": b}, id)
 
 
@@ -48,6 +49,7 @@ class Calculator:
 
 
 def run(client, calculator=None, **kwargs):
+    """Run the loop with the calculator prompt. kwargs override one option at a time."""
     options = dict(
         system="You are a careful calculator.",
         first_message="What is 2 + 3, plus 4?",
@@ -62,6 +64,7 @@ def run(client, calculator=None, **kwargs):
 
 
 def test_answers_directly_when_no_tool_is_needed():
+    """A text reply with no tool call is the answer, after surrounding whitespace is stripped."""
     client = ScriptedClient([resp(text("Nine."))])
     result = run(client)
 
@@ -71,6 +74,7 @@ def test_answers_directly_when_no_tool_is_needed():
 
 
 def test_runs_tools_until_the_model_answers():
+    """Each tool_use is run, its result is sent back, and the later text is the answer."""
     calc = Calculator()
     client = ScriptedClient([resp(add(2, 3, "t1")), resp(add(5, 4, "t2")), resp(text("  9  "))])
     result = run(client, calc)
@@ -88,6 +92,7 @@ def test_runs_tools_until_the_model_answers():
 
 
 def test_request_shape():
+    """The first request carries the prompt, tools, auto tool choice, and no beta headers."""
     client = ScriptedClient([resp(text("ok"))])
     run(client)
     api, request = client.requests[0]
@@ -104,6 +109,7 @@ def test_request_shape():
 
 
 def test_server_fallbacks_use_the_beta_api():
+    """server_fallbacks switches the call onto the beta endpoint with the fallback header."""
     client = ScriptedClient([resp(text("ok"))])
     run(client, server_fallbacks=True)
     api, request = client.requests[0]
@@ -114,6 +120,7 @@ def test_server_fallbacks_use_the_beta_api():
 
 
 def test_parallel_calls_are_answered_in_one_message():
+    """Several tool calls in one reply are all answered in the next single user message."""
     client = ScriptedClient([resp(add(1, 1, "a"), add(2, 2, "b")), resp(text("done"))])
     result = run(client)
 
@@ -123,6 +130,7 @@ def test_parallel_calls_are_answered_in_one_message():
 
 
 def test_tool_errors_are_flagged():
+    """A tool that returns is_error=True is recorded, and the API result is marked is_error."""
     client = ScriptedClient([resp(tool("divide", {"a": 1}, "x")), resp(text("can't"))])
     result = run(client)
 
@@ -131,6 +139,7 @@ def test_tool_errors_are_flagged():
 
 
 def test_cap_forbids_tools_and_forces_a_text_answer():
+    """After the cap, the next request sets tool_choice to none and tells the model to answer."""
     def model(kwargs):
         if kwargs["tool_choice"]["type"] == "none":
             return resp(text("best guess"))
@@ -149,12 +158,14 @@ def test_cap_forbids_tools_and_forces_a_text_answer():
 
 
 def test_cap_message_can_be_customized():
+    """cap_message is formatted with the cap and placed after the last tool result."""
     client = ScriptedClient([resp(add(1, 1, "a")), resp(text("ok"))])
     run(client, max_tool_calls=1, cap_message="Budget of {cap} spent; answer.")
     assert client.requests[1][1]["messages"][-1]["content"][-1]["text"] == "Budget of 1 spent; answer."
 
 
 def test_calls_beyond_the_cap_are_not_run():
+    """Extra tool calls in the same reply are not executed; each still gets an error result."""
     calls = [add(i, i, f"p{i}") for i in range(5)]
     calc = Calculator()
     client = ScriptedClient([resp(*calls), resp(text("ok"))])
@@ -169,6 +180,7 @@ def test_calls_beyond_the_cap_are_not_run():
 
 
 def test_check_can_reject_text_with_a_correction():
+    """A check that returns text sends that text back; None accepts the answer."""
     seen = []
 
     def check(answer, calls):
@@ -185,6 +197,7 @@ def test_check_can_reject_text_with_a_correction():
 
 
 def test_exceptions_from_check_propagate():
+    """The loop does not catch exceptions from check. The caller sees them."""
     class Stop(Exception):
         pass
 
@@ -197,6 +210,7 @@ def test_exceptions_from_check_propagate():
 
 
 def test_gives_up_after_max_requests():
+    """If every text answer is rejected, the loop stops after max_requests."""
     client = ScriptedClient([resp(text("no"))] * 3)
     with pytest.raises(AgentDidNotFinish):
         run(client, check=lambda answer, calls: "again", max_requests=3)
@@ -204,6 +218,7 @@ def test_gives_up_after_max_requests():
 
 
 def test_refusal_and_max_tokens_raise():
+    """refusal and max_tokens are failures, even when the reply also contains a tool call."""
     with pytest.raises(AgentRefused):
         run(ScriptedClient([resp(text(""), stop_reason="refusal")]))
     with pytest.raises(AgentOutOfTokens):
@@ -212,6 +227,7 @@ def test_refusal_and_max_tokens_raise():
 
 @pytest.mark.parametrize("stop_reason", ["model_context_window_exceeded", "something_new", None])
 def test_unexpected_stop_reason_is_never_taken_as_the_answer(stop_reason):
+    """A cut-off reply is not treated as the final answer, whatever the unknown reason is."""
     response = resp(text("The answer is 9 but I was cut o"))
     response.stop_reason = stop_reason
     with pytest.raises(AgentStoppedEarly) as caught:
@@ -220,6 +236,7 @@ def test_unexpected_stop_reason_is_never_taken_as_the_answer(stop_reason):
 
 
 def test_pause_turn_is_resumed_by_sending_the_reply_back():
+    """pause_turn appends the assistant turn and asks again, without running tools."""
     paused = resp(text("Working on it"), stop_reason="pause_turn")
     client = ScriptedClient([paused, resp(text("9"))])
     result = run(client)
@@ -229,10 +246,12 @@ def test_pause_turn_is_resumed_by_sending_the_reply_back():
 
 
 def test_stop_sequence_counts_as_finished():
+    """stop_sequence is a finished answer, the same as end_turn."""
     assert run(ScriptedClient([resp(text("9"), stop_reason="stop_sequence")])).text == "9"
 
 
 def test_tool_from_a_max_tokens_turn_is_never_run():
+    """A tool call inside a max_tokens reply is discarded with the rest of that turn."""
     calc = Calculator()
     with pytest.raises(AgentOutOfTokens):
         run(ScriptedClient([resp(add(1, 2, "t"), stop_reason="max_tokens")]), calc)
@@ -240,6 +259,7 @@ def test_tool_from_a_max_tokens_turn_is_never_run():
 
 
 def test_callbacks_report_requests_and_tool_calls_in_order():
+    """on_request fires before each model call; on_tool_call fires just before the tool runs."""
     events = []
     client = ScriptedClient([resp(add(2, 3, "t1")), resp(text("5"))])
     run(
@@ -251,6 +271,7 @@ def test_callbacks_report_requests_and_tool_calls_in_order():
 
 
 def test_agent_module_imports_nothing_from_the_debate_app():
+    """The loop stays generic: its imports are only the standard library."""
     import ast
     import inspect
 

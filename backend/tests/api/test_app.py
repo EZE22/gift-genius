@@ -18,6 +18,7 @@ SECRET = "sk-test-SECRET-123"
 
 
 def parse(body: str):
+    """Split an SSE body into (event name, data) pairs. Keep-alive comments are skipped."""
     events = []
     for block in body.strip().split("\n\n"):
         lines = block.split("\n")
@@ -29,11 +30,13 @@ def parse(body: str):
 
 
 def post(app, payload):
+    """POST one search and return the response. TestClient reads the stream to the end."""
     with TestClient(app) as client:
         return client.post("/api/gift-searches", json=payload)
 
 
 def test_streams_every_event_kind_in_order():
+    """A successful search streams the six event kinds, ending in done, with three gifts."""
     script = [resp(text("outdoors")), resp(search("hiking", 50)), resp(get("out-007")), good_reply()]
     app = create_app(lambda: settings(script))
     response = post(app, {"description": "Loves hiking", "budget": 50})
@@ -46,6 +49,7 @@ def test_streams_every_event_kind_in_order():
 
 
 def test_bad_requests_are_rejected():
+    """Blank text, a bad budget, an oversized description, or a missing field is HTTP 422."""
     app = create_app(lambda: settings([]))
     for payload in ({"description": "  ", "budget": 50}, {"description": "x", "budget": 0},
                     {"description": "x" * 1001, "budget": 50}, {"description": "x"}, {"budget": 50}):
@@ -53,6 +57,7 @@ def test_bad_requests_are_rejected():
 
 
 def test_errors_become_an_error_event_without_secrets():
+    """A failure while building the client becomes one error event with the safe message."""
     def factory():
         raise ConfigError("no key")
 
@@ -61,6 +66,7 @@ def test_errors_become_an_error_event_without_secrets():
 
 
 def test_api_errors_never_leak_the_key():
+    """An authentication error that mentions the key is rewritten. The key is not in the body."""
     request = httpx.Request("POST", "https://api.test")
     error = anthropic.AuthenticationError(f"bad key {SECRET}", response=httpx.Response(401, request=request), body=None)
     s = settings([error])
@@ -71,11 +77,13 @@ def test_api_errors_never_leak_the_key():
 
 
 def test_gift_error_message_is_shown():
+    """GiftError text is shown as written. Any other exception becomes the generic sentence."""
     assert describe_error(GiftError("Describe the person.")) == "Describe the person."
     assert "went wrong" in describe_error(RuntimeError(SECRET))
 
 
 def test_busy_when_all_slots_are_taken():
+    """If every search slot is held, the stream is a single busy error and no search starts."""
     slots = threading.BoundedSemaphore(1)
     slots.acquire()
 
@@ -87,5 +95,6 @@ def test_busy_when_all_slots_are_taken():
 
 
 def test_health():
+    """GET /api/health is a cheap check that the process is up. It does not call the model."""
     with TestClient(create_app(lambda: settings([]))) as client:
         assert client.get("/api/health").json() == {"ok": True}

@@ -9,6 +9,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { crashed: false };
 
   static getDerivedStateFromError(): State {
+    // React calls this during render, so it only flips the flag. Logging
+    // happens in componentDidCatch, which runs after the tree has committed.
     return { crashed: true };
   }
 

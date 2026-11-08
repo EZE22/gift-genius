@@ -67,16 +67,21 @@ export function feedLine(event: GiftEvent): Omit<FeedItem, "id"> | null {
 }
 
 export function reducer(state: SearchState, action: Action): SearchState {
+  // Pure: the same action on the same state always returns the same next state.
+  // The page dispatches one action per stream event, plus start, reset and failed.
   switch (action.type) {
     case "start":
+      // A new search drops the previous feed, cards and error.
       return { ...initialState, phase: "running" };
     case "reset":
       return initialState;
     case "failed":
+      // A network failure after the stream already finished is ignored.
       return state.phase === "running" ? { ...state, phase: "error", error: action.message } : state;
     case "event": {
       if (state.phase !== "running") return state; // a late event from a search that was reset
       const { event } = action;
+      // The shortlist is stored for the cards. The feed does not repeat it.
       if (event.type === "shortlist") return { ...state, shortlist: event.shortlist };
       if (event.type === "done") return { ...state, phase: "done" };
       if (event.type === "error") return { ...state, phase: "error", error: event.message };

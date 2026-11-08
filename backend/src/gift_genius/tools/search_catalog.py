@@ -33,7 +33,11 @@ SUFFIXES = ("ing", "es", "ed", "e", "s")
 
 
 def stem(word: str) -> str:
-    """A rough stem so hike, hikes and hiking all match ("hik")."""
+    """A rough stem so hike, hikes and hiking all match ("hik").
+
+    Suffixes are tried longest first. A stem shorter than 3 letters is left
+    alone, and a word ending in "ss" (such as "glass") is not stripped to "gla".
+    """
     for suffix in SUFFIXES:
         if word.endswith(suffix) and len(word) - len(suffix) >= 3 and not word.endswith("ss"):
             return word[: -len(suffix)]
@@ -46,6 +50,12 @@ def words(text: str) -> set[str]:
 
 
 def search(query: str, max_price: float) -> list[dict]:
+    """Items at or under max_price, ranked by how many query words they share.
+
+    The score is a count of overlapping stems across the name, category and
+    description. Ties break on item id so the order is stable. Items with no
+    overlap are left out, and the list stops at MAX_RESULTS.
+    """
     wanted = words(query)
     scored = []
     for item in load_catalog().values():
@@ -59,7 +69,12 @@ def search(query: str, max_price: float) -> list[dict]:
 
 
 def run(tool_input: dict) -> tuple[str, bool]:
-    """Returns (result text, is_error)."""
+    """Run the tool. Returns (text for the model, is_error).
+
+    Bad arguments are errors, so the model can correct them. An empty result
+    is not an error: it is a hint to try broader words, and it does not count
+    against the agent as a failed tool call.
+    """
     query = tool_input.get("query")
     max_price = tool_input.get("max_price")
     if not isinstance(query, str) or not query.strip():

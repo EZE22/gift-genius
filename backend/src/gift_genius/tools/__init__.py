@@ -9,6 +9,12 @@ SCHEMAS = [search_catalog.SCHEMA, get_item.SCHEMA]
 
 
 def run_tool(name: str, tool_input: dict) -> tuple[str, bool]:
+    """Dispatch one tool call. Unknown names and non-object input are errors.
+
+    The loop in agent.py treats the second value as the API's is_error flag,
+    so a bad call comes back to the model as a failed tool result rather than
+    raising.
+    """
     tool = TOOLS.get(name)
     if tool is None:
         return f"Unknown tool {name!r}.", True

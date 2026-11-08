@@ -12,6 +12,8 @@ def main() -> None:
     """Run the API server (the gift-genius-api command)."""
     import uvicorn
 
+    # The string form lets uvicorn import the app. Host and port can be
+    # overridden for a local experiment; the default host is still loopback.
     uvicorn.run(
         "gift_genius.api.app:app",
         host=os.environ.get("GIFT_GENIUS_API_HOST", API_HOST),

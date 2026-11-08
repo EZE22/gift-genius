@@ -1,4 +1,8 @@
-"""The Foodie specialist."""
+"""The Foodie specialist.
+
+Selected when the router label is "foodie". Same tools and cap as the others;
+only the focus line in the system prompt is different.
+"""
 
 from .specialist import Specialist
 

@@ -1,3 +1,7 @@
+// Shown when the search stops with an error event or a failed request.
+// The message is the one the client already made safe to display. Try again
+// reruns the same description and budget.
+
 import { forwardRef } from "react";
 
 export const ErrorPanel = forwardRef<HTMLDivElement, { message: string; onRetry: () => void }>(function ErrorPanel(

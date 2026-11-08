@@ -33,7 +33,11 @@ class Settings:
 
 
 def load_env() -> None:
-    """Load the root .env into the environment. Variables already set are kept."""
+    """Load the root .env into the environment. Variables already set are kept.
+
+    The real key lives only in that file. `load_dotenv` does not override
+    variables that the process already has, so a test or a shell export wins.
+    """
     if ROOT_ENV.is_file():
         load_dotenv(ROOT_ENV)
     else:
@@ -47,14 +51,18 @@ def make_client() -> Settings:
     the Claude API with ANTHROPIC_API_KEY. ROUTER_MODEL picks the router's model;
     when it is empty or unset the router uses the main model.
     """
+    # An empty ROUTER_MODEL means "use whichever model the specialists use".
     router_override = os.environ.get("ROUTER_MODEL", "").strip()
     if os.environ.get("ANTHROPIC_FOUNDRY_API_KEY"):
+        # Foundry identifies the model by deployment name, and it has no
+        # server-side refusal fallback, so that flag stays off.
         if not os.environ.get("ANTHROPIC_FOUNDRY_BASE_URL"):
             raise ConfigError("ANTHROPIC_FOUNDRY_BASE_URL is not set. Add your Foundry endpoint to .env.")
         model = os.environ.get("ANTHROPIC_FOUNDRY_DEPLOYMENT", "").strip() or MODEL
         client = anthropic.AnthropicFoundry(timeout=TIMEOUT, max_retries=MAX_RETRIES)
         return Settings(client, model, router_override or model, False)
     if os.environ.get("ANTHROPIC_API_KEY"):
+        # The Claude API uses the fixed specialist model and may use fallbacks.
         client = anthropic.Anthropic(timeout=TIMEOUT, max_retries=MAX_RETRIES)
         return Settings(client, MODEL, router_override or MODEL, True)
     raise ConfigError(

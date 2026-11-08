@@ -18,6 +18,7 @@
 - [x] Checked in the browser: empty, loading, results, error + Try again, phone width (375px), keyboard use, New search
 - [x] Live search in the browser (outdoors, twice) and in the CLI (foodie)
 - [x] README with setup and the Pattern section (diagram + legend)
+- [x] Comments through backend, frontend/web and frontend/cli explaining what each step does
 
 ## Open
 - [ ] Set ROUTER_MODEL to a fast model. On Foundry that needs a Claude Haiku 5.5 deployment; until then the router uses the main deployment.

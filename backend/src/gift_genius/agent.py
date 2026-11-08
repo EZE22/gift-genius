@@ -73,6 +73,12 @@ Check = Callable[[str, "list[ToolCall]"], Optional[str]]
 
 
 def _create(client, model: str, server_fallbacks: bool, params: dict):
+    """Send one Messages API request and return the whole reply.
+
+    On the Claude API, the beta endpoint can swap in a fallback model if this
+    one refuses. Foundry does not support that header, so those calls use the
+    plain endpoint.
+    """
     if server_fallbacks:
         # Server-side refusal fallback: Claude API only, not Microsoft Foundry.
         return client.beta.messages.create(
@@ -104,11 +110,16 @@ def run_agent(
     callbacks propagate unchanged.
     """
     if max_requests is None:
+        # A few extra turns past the tool cap: one to force the text answer,
+        # plus room for a check to send the answer back.
         max_requests = max_tool_calls + 5
+    # The transcript starts as one user turn. Every later model reply and tool
+    # result is appended here and sent back on the next request.
     messages: list = [{"role": "user", "content": first_message}]
     calls: list[ToolCall] = []
 
     for _ in range(max_requests):
+        # Spent the tool budget: the next request must answer in text.
         force_text = len(calls) >= max_tool_calls
         if on_request:
             on_request()
@@ -124,6 +135,8 @@ def run_agent(
         )
         response = _create(client, model, server_fallbacks, params)
 
+        # These stop reasons are failures. A max_tokens reply can still contain
+        # a tool call, but it is unfinished, so the loop never runs that tool.
         if response.stop_reason == "refusal":
             raise AgentRefused()
         if response.stop_reason == "max_tokens":
@@ -139,6 +152,9 @@ def run_agent(
             raise AgentStoppedEarly(response.stop_reason)
 
         if tool_uses:
+            # One reply can ask for several tools. Run the ones still under the
+            # cap, and answer the rest with an error so every tool_use id has a
+            # matching tool_result (the API requires that).
             results: list = []
             for block in tool_uses:
                 if len(calls) >= max_tool_calls:
@@ -160,15 +176,20 @@ def run_agent(
                     result["is_error"] = True
                 results.append(result)
             if len(calls) >= max_tool_calls:
+                # Sit next to the tool results so the model sees the cap before
+                # the following request, which will set tool_choice to "none".
                 results.append({"type": "text", "text": cap_message.format(cap=max_tool_calls)})
             # All results go back in one user message, matching each tool_use id.
             messages.append({"role": "user", "content": results})
             continue
 
+        # No tools in this reply: treat the text blocks as the candidate answer.
         text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text").strip()
         correction = check(text, calls) if check else None
         if correction is None:
             return AgentResult(text, calls)
+        # The check rejected the text. Send its message back as the next user
+        # turn and let the model try again, still inside this same loop.
         messages.append({"role": "user", "content": correction})
 
     raise AgentDidNotFinish()

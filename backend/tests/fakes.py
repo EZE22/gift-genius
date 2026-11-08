@@ -9,18 +9,22 @@ from gift_genius.tools.catalog import load_catalog
 
 
 def text(t):
+    """A text block, the shape the Messages API uses for a written reply."""
     return SimpleNamespace(type="text", text=t)
 
 
 def tool(name, tool_input, id):
+    """A tool_use block: the model asking to run one tool."""
     return SimpleNamespace(type="tool_use", name=name, input=tool_input, id=id)
 
 
 def search(query, max_price=100, id="s1"):
+    """A search_catalog tool call with the usual argument names."""
     return tool("search_catalog", {"query": query, "max_price": max_price}, id)
 
 
 def get(item_id, id="g1"):
+    """A get_item tool call for one catalog id."""
     return tool("get_item", {"item_id": item_id}, id)
 
 
@@ -51,10 +55,15 @@ class ScriptedClient:
 
 
 def settings(script, model="main-model", router_model="router-model"):
+    """A Settings object whose client plays `script` and never calls a real model.
+
+    server_fallbacks is off so tests hit the plain messages.create path.
+    """
     return Settings(ScriptedClient(script), model, router_model, False)
 
 
 def tool_results(request):
+    """The tool_result blocks in the last user message of one recorded request."""
     content = request["messages"][-1]["content"]
     return [b for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
 
@@ -69,11 +78,13 @@ def gift(item_id, **overrides):
 
 
 def shortlist(*gifts):
+    """The JSON text the specialist is supposed to return."""
     return json.dumps({"gifts": list(gifts)})
 
 
-GOOD_OUTDOORS = ("out-007", "out-006", "out-012")  # $28.99, $31.99, $25.99
+GOOD_OUTDOORS = ("out-007", "out-006", "out-012")  # $28.99, $31.99, $25.99, all under a $50 budget
 
 
 def good_reply():
+    """A finished model reply whose three gifts pass every check at $50."""
     return resp(text(shortlist(*(gift(i) for i in GOOD_OUTDOORS))))

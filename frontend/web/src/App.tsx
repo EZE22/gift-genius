@@ -1,3 +1,6 @@
+// The page. The form lives on the left; the activity feed and results live on
+// the right. Search progress arrives as events and is stored by searchState.
+
 import { useEffect, useReducer, useRef, useState } from "react";
 
 import { startSearch as realStartSearch, type StartSearch } from "./api";
@@ -8,9 +11,13 @@ import { SearchForm, parseBudget } from "./components/SearchForm";
 import { initialState, reducer } from "./searchState";
 
 export function App({ startSearch = realStartSearch }: { startSearch?: StartSearch }) {
+  // Tests pass their own startSearch so the page never calls the real API.
   const [state, dispatch] = useReducer(reducer, initialState);
+  // Description and budget stay in the form until New search clears them.
+  // They are not part of the search reducer, which only tracks the stream.
   const [description, setDescription] = useState("");
   const [budget, setBudget] = useState("");
+  // The in-flight request. Aborting it drops late events from a previous search.
   const controller = useRef<AbortController | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const resultsRef = useRef<HTMLHeadingElement>(null);
@@ -18,7 +25,9 @@ export function App({ startSearch = realStartSearch }: { startSearch?: StartSear
 
   const run = () => {
     const value = parseBudget(budget);
+    // The button is disabled in this case. This guard covers Enter on a bad form.
     if (!description.trim() || value === null) return;
+    // A second click, or Try again, cancels the search that is already running.
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
@@ -26,6 +35,7 @@ export function App({ startSearch = realStartSearch }: { startSearch?: StartSear
     startSearch(
       { description: description.trim(), budget: value },
       (event) => {
+        // Ignore events that arrive after this search was aborted.
         if (!current.signal.aborted) dispatch({ type: "event", event });
       },
       current.signal,
@@ -36,6 +46,7 @@ export function App({ startSearch = realStartSearch }: { startSearch?: StartSear
   };
 
   const reset = () => {
+    // Stop the stream, wipe the feed and the cards, and empty the form.
     controller.current?.abort();
     controller.current = null;
     dispatch({ type: "reset" });

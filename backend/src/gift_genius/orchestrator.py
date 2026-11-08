@@ -63,6 +63,11 @@ def pick_agent(label: str) -> Specialist:
 
 
 def check_request(description: str, budget) -> tuple[str, float]:
+    """Reject a blank, oversized, or non-numeric request before any model call.
+
+    bool is excluded on purpose: in Python, True is an int, and True would
+    otherwise sneak through as a budget of 1.
+    """
     description = description.strip() if isinstance(description, str) else ""
     if not description:
         raise GiftError("Describe the person you're buying for.")
@@ -77,8 +82,11 @@ def _tool_runner(attempt: int, emit: OnEvent):
     """Run a tool, then report it to the activity feed."""
 
     def run(name: str, tool_input: dict) -> tuple[str, bool]:
+        # The tool runs first. The event is a summary for the activity feed;
+        # the model still receives the full tool result below.
         content, is_error = run_tool(name, tool_input)
         if name == "search_catalog":
+            # A failed search, or a plain-text "no matches" reply, counts as zero.
             matches = 0
             if not is_error and content.startswith("{"):
                 matches = len(json.loads(content).get("results", []))
@@ -102,6 +110,7 @@ def _tool_runner(attempt: int, emit: OnEvent):
 
 
 def shortlist_data(result: GiftResult) -> dict:
+    """The shortlist event payload: gifts that passed, plus why others were removed."""
     return {
         "label": result.label,
         "agent": result.agent,
@@ -118,12 +127,16 @@ def shortlist_data(result: GiftResult) -> dict:
 def find_gifts(settings, description: str, budget: float, on_event: Optional[OnEvent] = None) -> GiftResult:
     """Run the whole flow and return the checked shortlist."""
     description, budget = check_request(description, budget)
+    # Callers that don't care about progress (tests, a silent run) pass nothing.
     emit: OnEvent = on_event or (lambda kind, data: None)
 
+    # Step 1–2: one label from the router, then code — not the model — picks the agent.
     label = route(settings, description)
     agent = pick_agent(label)
     emit(ROUTED, {"label": label or "(none)", "agent": agent.name, "fallback": agent is GENERAL})
 
+    # Step 3–4: the specialist searches, then code checks the shortlist.
+    # `problems` is None on the first try and the checker's wording on a retry.
     problems: list[str] | None = None
     check = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -139,14 +152,19 @@ def find_gifts(settings, description: str, budget: float, on_event: Optional[OnE
                 server_fallbacks=settings.server_fallbacks,
             )
         except AgentError as error:
+            # The loop itself failed (refusal, token limit, no accepted answer).
+            # The type name is enough for the user; the raw error stays in the cause.
             raise GiftError(f"The {agent.name} agent couldn't finish ({type(error).__name__}).") from error
         check = check_shortlist(reply.text, budget)
         will_retry = not check.ok and attempt < MAX_ATTEMPTS
         emit(VALIDATED, {"attempt": attempt, "ok": check.ok, "problems": check.problems, "will_retry": will_retry})
         if check.ok:
             break
+        # The next attempt, if there is one, sees these exact failures in its prompt.
         problems = check.problems
 
+    # A second failure still returns. Gifts that passed are kept; `problems`
+    # explains the ones that were removed.
     result = GiftResult(label, agent.name, check.passed, check.removed, check.problems, attempt)
     emit(SHORTLIST, shortlist_data(result))
     return result

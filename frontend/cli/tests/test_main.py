@@ -9,12 +9,14 @@ from cli_fakes import GIFTS, answers, factory, reply, resp, text, tool
 
 
 def run(argv, script, ask=None):
+    """Run the command against a scripted model and capture stdout plus the exit code."""
     out = io.StringIO()
     code = main(argv, ask=ask or answers(), out=out, settings_factory=factory(script))
     return code, out.getvalue()
 
 
 def test_full_search_from_arguments():
+    """A description and --budget skip the prompts and print the router line, the search, and the cards."""
     script = [resp(text("outdoors")), resp(tool("search_catalog", {"query": "hiking", "max_price": 50})), reply(GIFTS)]
     code, out = run(["--budget", "50", "Loves hiking"], script)
     assert code == 0
@@ -27,6 +29,7 @@ def test_full_search_from_arguments():
 
 
 def test_asks_for_missing_values_and_repeats_bad_ones():
+    """With no arguments, blank and invalid answers are rejected until both fields are usable."""
     script = [resp(text("outdoors")), reply(GIFTS)]
     code, out = run([], script, ask=answers("  ", "Loves hiking", "lots", "0", "$50"))
     assert code == 0
@@ -35,6 +38,7 @@ def test_asks_for_missing_values_and_repeats_bad_ones():
 
 
 def test_retry_then_partial_result_explains_removals():
+    """Two failed shortlists still print the gifts that passed and why the rest were removed."""
     over = dict(GIFTS[2], item_id="tech-002", name="Noise-Cancelling Headphones", price=188.99,
                 link="https://gifts.example.com/item/tech-002")
     script = [resp(text("outdoors")), reply(GIFTS[:2] + [over]), reply(GIFTS[:2] + [over])]
@@ -46,11 +50,13 @@ def test_retry_then_partial_result_explains_removals():
 
 
 def test_unknown_label_uses_general():
+    """A router label outside the three categories is explained as the General agent taking over."""
     code, out = run(["--budget", "50", "Someone"], [resp(text("books")), reply(GIFTS)])
     assert "isn't a category, so the General agent takes it" in out
 
 
 def test_errors_are_friendly():
+    """A setup failure prints the safe sentence and exit code 1, with no traceback."""
     def broken():
         raise ConfigError("missing")
 
@@ -60,6 +66,7 @@ def test_errors_are_friendly():
 
 
 def test_ctrl_d_at_a_prompt_exits_cleanly():
+    """EOF at a prompt exits 130 and says no search was run."""
     def eof(prompt=""):
         raise EOFError
 

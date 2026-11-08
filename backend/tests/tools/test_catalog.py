@@ -1,7 +1,10 @@
+"""The catalog file is the only data the tools read: about 60 gifts, three categories."""
+
 from gift_genius.tools.catalog import load_catalog
 
 
 def test_catalog_has_about_sixty_gifts_across_three_categories():
+    """Every item has a unique id, a price, a description, and a link built from that id."""
     items = list(load_catalog().values())
     assert 55 <= len(items) <= 65
     assert {i.category for i in items} == {"tech", "outdoors", "foodie"}

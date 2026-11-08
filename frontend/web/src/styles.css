@@ -378,6 +378,7 @@ input:focus-visible {
   margin: 0 0 calc(var(--space) * 2);
 }
 
+/* Text for screen readers that should not take space on the page. */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -387,7 +388,10 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-/* ---- Narrow screens ---- */
+/* ---- Narrow screens ----
+   At 900px the two columns stack and the gift cards become one column.
+   At 480px the page padding shrinks, the title gets smaller, and the buttons
+   stretch to the full width so they stay easy to tap. */
 
 @media (max-width: 900px) {
   .layout {

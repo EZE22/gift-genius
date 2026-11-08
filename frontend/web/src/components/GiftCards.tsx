@@ -1,3 +1,7 @@
+// The result cards. Names, prices and links are the ones the server rebuilt
+// from the catalog. A shortlist that failed twice still renders the gifts
+// that passed, then a note listing what was removed and why.
+
 import { forwardRef } from "react";
 
 import type { Shortlist } from "../api";
@@ -8,12 +12,16 @@ export const GiftCards = forwardRef<HTMLHeadingElement, { shortlist: Shortlist }
   headingRef,
 ) {
   const { gifts, removed, problems } = shortlist;
+  // problems is empty only when every check passed. Otherwise the heading
+  // counts the gifts that survived, which may be fewer than three.
   const complete = problems.length === 0;
   const heading = complete
     ? "Three gift ideas"
     : gifts.length === 0
       ? "No gift ideas passed the checks"
       : `${gifts.length} gift ${gifts.length === 1 ? "idea" : "ideas"} passed the checks`;
+  // Per-gift failures are already listed under `removed`. This keeps the
+  // shortlist-wide ones, such as "expected exactly 3 gifts".
   const otherProblems = problems.filter((p) => !removed.some((r) => p.startsWith(`${r.name} (`)));
 
   return (

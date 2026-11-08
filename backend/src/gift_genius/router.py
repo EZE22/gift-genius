@@ -32,7 +32,11 @@ def normalize(text: str) -> str:
 
 
 def route(settings, description: str) -> str:
-    """Return the router's label. It may be outside LABELS; the caller falls back."""
+    """Return the router's label. It may be outside LABELS; the caller falls back.
+
+    This is a single request with no tools. The description is wrapped in a tag
+    so the model treats it as the shopper's words, not as new instructions.
+    """
     response = settings.client.messages.create(
         model=settings.router_model,
         max_tokens=ROUTER_MAX_TOKENS,
@@ -42,5 +46,6 @@ def route(settings, description: str) -> str:
     )
     if response.stop_reason not in ("end_turn", "stop_sequence"):
         return ""  # refused or cut off: no label, so the fallback agent runs
+    # Thinking blocks are ignored. Only the text the model wrote is a label.
     text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
     return normalize(text)

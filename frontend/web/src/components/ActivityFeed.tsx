@@ -1,3 +1,7 @@
+// The live activity list. Each row is one stream event turned into a sentence
+// by searchState.feedLine. The last row, while the search is running, is a
+// "Working" placeholder that is not part of the stored feed.
+
 import type { FeedItem, Phase } from "../searchState";
 
 const KIND_LABEL = { llm: "LLM call", agent: "Agent", code: "Code", warn: "Code" } as const;

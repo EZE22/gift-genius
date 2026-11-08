@@ -66,6 +66,9 @@ const safeLink = (value: unknown): string => {
 };
 
 function asShortlist(payload: Payload): Shortlist {
+  // The server sends snake_case. This is the one place those names become
+  // the camelCase fields the rest of the page uses. A gift with no name is
+  // dropped rather than rendered as a blank card.
   if (!Array.isArray(payload.gifts)) throw new ProtocolError("shortlist without gifts");
   const gifts = payload.gifts.flatMap((raw) => {
     const g = (raw ?? {}) as Payload;
@@ -135,6 +138,8 @@ export class SseParser {
   constructor(private readonly onEvent: (event: GiftEvent) => void) {}
 
   feed(chunk: string): void {
+    // Chunks are not events. A TCP read can split one event, or hold several.
+    // A blank line is the SSE record separator, so only a complete block is parsed.
     this.buffer += chunk.replace(/\r\n/g, "\n");
     let end: number;
     while ((end = this.buffer.indexOf("\n\n")) !== -1) {
@@ -165,6 +170,8 @@ function httpErrorMessage(status: number): string {
 class Stalled extends Error {}
 
 function readWithin<T>(reader: ReadableStreamDefaultReader<T>, ms: number): Promise<ReadableStreamReadResult<T>> {
+  // reader.read() has no timeout of its own. Race it against a timer so a
+  // stream that goes quiet (no keep-alive, no event) fails instead of hanging.
   let timer: ReturnType<typeof setTimeout> | undefined;
   const stalled = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Stalled()), ms);
@@ -178,6 +185,8 @@ export const startSearch = async (
   signal: AbortSignal,
   stallMs: number = STALL_MS,
 ): Promise<void> => {
+  // POST the description and budget, then read the response body as a stream
+  // of SSE events. The promise resolves when the server sends done or error.
   let response: Response;
   try {
     response = await fetch("/api/gift-searches", {

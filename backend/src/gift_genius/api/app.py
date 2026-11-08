@@ -50,6 +50,7 @@ class SearchRequest(BaseModel):
     @field_validator("description")
     @classmethod
     def description_not_blank(cls, value: str) -> str:
+        """Reject whitespace-only text. FastAPI turns ValueError into HTTP 422."""
         value = value.strip()
         if not value:
             raise ValueError("Describe the person you're buying for.")
@@ -65,6 +66,7 @@ class _TimedOut(Exception):
 
 
 def sse(event: str, data: dict) -> str:
+    """One Server-Sent Event. A blank line ends the event so the client can parse it."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
@@ -77,7 +79,13 @@ async def search_events(
     deadline_seconds: float = SEARCH_DEADLINE_SECONDS,
     heartbeat_seconds: float = HEARTBEAT_SECONDS,
 ) -> AsyncIterator[str]:
-    """Run one search in a worker thread and yield its events as SSE text."""
+    """Run one search in a worker thread and yield its events as SSE text.
+
+    find_gifts blocks on the model, so it cannot run on the asyncio loop.
+    The thread pushes finished SSE chunks onto a queue; this coroutine waits
+    on that queue and yields them. None on the queue means the search is over.
+    """
+    # A full server refuses immediately instead of queueing another paid call.
     if slots is not None and not slots.acquire(blocking=False):
         yield sse("error", {"message": BUSY_MESSAGE})
         return
@@ -88,12 +96,15 @@ async def search_events(
     deadline = time.monotonic() + deadline_seconds
 
     def push(item) -> None:
+        # call_soon_threadsafe is the safe way for the worker to touch the loop.
         try:
             loop.call_soon_threadsafe(queue.put_nowait, item)
         except RuntimeError:  # the event loop closed (server shutdown)
             pass
 
     def on_event(kind: str, data: dict) -> None:
+        # Raised inside find_gifts, so the worker stops at the next tool call
+        # or validation event rather than finishing a search nobody is reading.
         if cancelled.is_set():
             raise _Cancelled()
         if time.monotonic() > deadline:
@@ -115,18 +126,20 @@ async def search_events(
             log_failure(error)
             final = sse("error", {"message": describe_error(error)})
         finally:
+            # A worker that exits without done or error still owes the client a close.
             if final is None and not cancelled.is_set():
                 log.error("Search worker ended without a result")
                 final = sse("error", {"message": GENERIC_MESSAGE})
             if final is not None:
                 push(final)
-            push(None)
+            push(None)  # tells the async side to stop iterating
             if slots is not None:
                 slots.release()
 
     try:
         threading.Thread(target=work, name="gift-search", daemon=True).start()
     except BaseException:
+        # The thread never started, so work() will not release the slot.
         if slots is not None:
             slots.release()
         raise
@@ -137,6 +150,8 @@ async def search_events(
                 yield sse("error", {"message": TIMEOUT_MESSAGE})
                 return
             try:
+                # Wait for the next event, but not longer than the heartbeat,
+                # so a quiet model call still sends bytes and proxies stay open.
                 item = await asyncio.wait_for(queue.get(), timeout=min(heartbeat_seconds, remaining))
             except asyncio.TimeoutError:
                 yield KEEP_ALIVE
@@ -145,10 +160,13 @@ async def search_events(
                 return
             yield item
     finally:
+        # Client disconnect, timeout, or a normal finish: tell the worker to stop.
         cancelled.set()
 
 
 def create_app(client_factory: Callable = make_client, max_searches: int = MAX_CONCURRENT_SEARCHES) -> FastAPI:
+    """Build the FastAPI app. Tests pass a fake client_factory so no model is called."""
+    # One permit per in-flight search. BoundedSemaphore raises if released too often.
     slots = threading.BoundedSemaphore(max_searches)
 
     @asynccontextmanager
@@ -167,6 +185,8 @@ def create_app(client_factory: Callable = make_client, max_searches: int = MAX_C
         return StreamingResponse(
             search_events(request.description, request.budget, client_factory, slots=slots),
             media_type="text/event-stream",
+            # no-cache and X-Accel-Buffering keep proxies from holding the stream
+            # until the search finishes. Events should arrive as they happen.
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 

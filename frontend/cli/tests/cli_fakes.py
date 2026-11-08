@@ -7,24 +7,30 @@ from gift_genius import Settings
 
 
 def text(t):
+    """A text block in a fake model reply."""
     return SimpleNamespace(type="text", text=t)
 
 
 def tool(name, tool_input, id="t1"):
+    """A tool_use block in a fake model reply."""
     return SimpleNamespace(type="tool_use", name=name, input=tool_input, id=id)
 
 
 def resp(*blocks):
+    """One fake Messages API response. Tool blocks imply stop_reason tool_use."""
     stop = "tool_use" if any(b.type == "tool_use" for b in blocks) else "end_turn"
     return SimpleNamespace(content=list(blocks), stop_reason=stop)
 
 
 class ScriptedClient:
+    """Plays scripted replies in order. Each messages.create consumes the next one."""
+
     def __init__(self, script):
         self.script = list(script)
         self.messages = SimpleNamespace(create=lambda **kw: self.script.pop(0))
 
 
+# Three real outdoors items, all under $50, copied in the shape the shortlist uses.
 GIFTS = [
     {"item_id": "out-007", "name": "Insulated Water Bottle", "price": 28.99,
      "link": "https://gifts.example.com/item/out-007", "reason": "Keeps water cold on long hikes."},
@@ -36,13 +42,16 @@ GIFTS = [
 
 
 def reply(gifts):
+    """A finished specialist turn whose text is the shortlist JSON."""
     return resp(text(json.dumps({"gifts": gifts})))
 
 
 def factory(script):
+    """A settings_factory the CLI can call instead of reading .env."""
     return lambda: Settings(ScriptedClient(script), "main", "router", False)
 
 
 def answers(*values):
+    """A stand-in for input() that returns these lines, one prompt at a time."""
     it = iter(values)
     return lambda prompt="": next(it)
