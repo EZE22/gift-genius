@@ -103,3 +103,18 @@ jobs:
       # setup step is needed. A failure prints the container log in this step.
       - name: Docker smoke test
         run: scripts/docker-smoke-test.sh
+
+  # Builds the web image and the back end image, starts them together on one
+  # network, and checks that nginx serves the page and forwards /api to the
+  # back end. Plain code, no model: nothing here calls one, so no key and no
+  # Ollama are needed. It is the same script you run on your Mac.
+  docker-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub's Ubuntu runners already have Docker and curl installed.
+      # A failure prints both containers' logs in this step.
+      - name: Docker web smoke test
+        run: scripts/docker-web-smoke-test.sh
