@@ -100,6 +100,8 @@ Copy `.env.example` to `.env` at the repository root and fill in either `ANTHROP
 `ROUTER_MODEL` to a fast model (Claude API: e.g. `claude-haiku-5-5`; Foundry: a deployment name).
 If it's empty, the router uses the main model. `.env` is git-ignored, and the key never leaves the back end.
 
+To run with no API key, use a local model through Ollama. Set `MODEL_SOURCE=ollama` in `.env`. `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are optional, and the default model is a small non-thinking one that fits an 8 GB machine. Use a model that does not think before it answers: a thinking model made each step take minutes on that hardware. If `ROUTER_MODEL` is empty, the router uses the same model. A small model can invent products, but the catalog check removes them, so you may see "No gift ideas passed the checks" instead of fake results.
+
 ## Run
 
 CLI:
