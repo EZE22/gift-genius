@@ -74,13 +74,17 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-# Show both containers' own output, so the reason is in the log, not a mystery.
-if [ "$healthy" != true ]; then
-  echo "FAIL: no healthy answer through nginx after 30 seconds."
+# Print both containers' own output, so the reason is in the log, not a mystery.
+show_logs() {
   echo "--- web container log ---"
   docker logs "$WEB_NAME" || true
   echo "--- back end container log ---"
   docker logs "$API_NAME" || true
+}
+
+if [ "$healthy" != true ]; then
+  echo "FAIL: no healthy answer through nginx after 30 seconds."
+  show_logs
   exit 1
 fi
 echo "nginx forwarded /api/health to the back end"
@@ -88,7 +92,13 @@ echo "nginx forwarded /api/health to the back end"
 # The page must be the React app: its HTML has the empty root element that the
 # JavaScript fills in.
 echo "Checking the page ..."
-page="$(curl -fsS "${BASE_URL}/")"
+# If the request itself fails (for example a 404), say so and show the logs,
+# instead of letting "set -e" stop the script with only curl's one line.
+if ! page="$(curl -fsS "${BASE_URL}/")"; then
+  echo "FAIL: the page request to ${BASE_URL}/ failed"
+  show_logs
+  exit 1
+fi
 if ! printf '%s' "$page" | grep -q 'id="root"'; then
   echo "FAIL: the page has no id=\"root\" element, so it is not the React app"
   exit 1
@@ -104,7 +114,11 @@ if [ -z "$asset" ]; then
   echo "FAIL: the page does not reference a JavaScript file under /assets/"
   exit 1
 fi
-curl -fsS -o /dev/null "${BASE_URL}${asset}"
+if ! curl -fsS -o /dev/null "${BASE_URL}${asset}"; then
+  echo "FAIL: the JavaScript file ${asset} was not served"
+  show_logs
+  exit 1
+fi
 echo "The page and its JavaScript file (${asset}) were served"
 
 echo "PASS: nginx serves the web app and forwards /api to the back end"
