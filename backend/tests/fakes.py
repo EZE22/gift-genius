@@ -54,15 +54,15 @@ class ScriptedClient:
         return item(kwargs) if callable(item) else item
 
 
-def settings(script, model="main-model", router_model="router-model"):
+def settings(script, model="main-model", router_model="router-model", claude_features=True):
     """A Settings object whose client plays `script` and never calls a real model.
 
     server_fallbacks is off so tests hit the plain messages.create path.
+    claude_features is on by default because the scripted client stands in for Claude.
+    Pass False to test the Ollama path.
     """
-    # The scripted client stands in for Claude, so Claude-only features stay on.
-    # Passed by name so a reader can see which flag is which.
     return Settings(
-        ScriptedClient(script), model, router_model, server_fallbacks=False, claude_features=True
+        ScriptedClient(script), model, router_model, server_fallbacks=False, claude_features=claude_features
     )
 
 

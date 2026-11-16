@@ -18,6 +18,15 @@ def test_one_call_to_the_router_model_returns_the_label():
     assert "<description>\nLoves hiking\n</description>" in request["messages"][0]["content"]
 
 
+def test_without_claude_features_the_router_sends_no_effort_setting():
+    """Ollama does not understand output_config, so with claude_features off the router
+    leaves it out. The label still comes back."""
+    s = settings([resp(text("outdoors"))], claude_features=False)
+    assert route(s, "Loves hiking") == "outdoors"
+    [(api, request)] = s.client.requests
+    assert "output_config" not in request
+
+
 @pytest.mark.parametrize("reply,label", [("Tech.", "tech"), ("  FOODIE\n", "foodie"), ("outdoors - hikes", "outdoors"),
                                          ("books", "books"), ("", "")])
 def test_normalize(reply, label):

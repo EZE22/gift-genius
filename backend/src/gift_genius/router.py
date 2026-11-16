@@ -37,13 +37,18 @@ def route(settings, description: str) -> str:
     This is a single request with no tools. The description is wrapped in a tag
     so the model treats it as the shopper's words, not as new instructions.
     """
-    response = settings.client.messages.create(
+    # The request every model accepts.
+    params = dict(
         model=settings.router_model,
         max_tokens=ROUTER_MAX_TOKENS,
         system=SYSTEM,
         messages=[{"role": "user", "content": f"<description>\n{description}\n</description>"}],
-        output_config={"effort": ROUTER_EFFORT},
     )
+    if settings.claude_features:
+        # The effort setting is Claude-only. Ollama does not understand it, so it is
+        # sent only when the model source is Claude or Foundry.
+        params["output_config"] = {"effort": ROUTER_EFFORT}
+    response = settings.client.messages.create(**params)
     if response.stop_reason not in ("end_turn", "stop_sequence"):
         return ""  # refused or cut off: no label, so the fallback agent runs
     # Thinking blocks are ignored. Only the text the model wrote is a label.
