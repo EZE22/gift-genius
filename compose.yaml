@@ -1,0 +1,35 @@
+# Starts the whole Gift Genius app with one command: docker compose up --build
+# Plain configuration: Compose follows the start order written here and
+# decides nothing on its own. Ollama is NOT started here. It keeps running on
+# your Mac, because a small Mac has no memory to spare for a second copy.
+name: gift-genius
+
+services:
+  # The back end API. The name "api" matters: nginx in the web container
+  # forwards /api to the host name "api".
+  api:
+    build: ./backend
+    # Variables are listed one by one on purpose. Your .env may hold an API key,
+    # and a key that is not listed here is never passed into the container.
+    # "${NAME:-default}" means: use NAME from .env or the shell, else the default.
+    environment:
+      MODEL_SOURCE: ${MODEL_SOURCE:-ollama}
+      # Inside a container "localhost" is the container itself, so the default
+      # points at your Mac. host.docker.internal is Docker Desktop's name for it.
+      # (Plain Linux Docker needs an extra "extra_hosts" line for this name.)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Empty means "use the code's default model" (the code treats empty as unset).
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+    # No "ports" here on purpose: the back end has no authentication, so only
+    # other containers on this network can reach it.
+
+  web:
+    build: ./frontend/web
+    # Start only once the api health check passes. nginx looks up the name
+    # "api" when it starts and refuses to start if the back end is not there.
+    depends_on:
+      api:
+        condition: service_healthy
+    # 127.0.0.1 on the left: reachable from this machine only, not the network.
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"

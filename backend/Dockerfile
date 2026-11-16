@@ -35,6 +35,15 @@ USER app
 # Documentation only: it does not publish the port. "docker run -p" does that.
 EXPOSE 8001
 
+# Tells Docker whether the server is really answering, not just running.
+# Compose's "--wait" and "depends_on: service_healthy" use this, and so will a
+# Kubernetes probe later. The check uses Python because the slim image has no
+# curl. urlopen raises an error on a refused connection or a non-2xx answer,
+# and an error makes Python exit with a failure. It reads the same port
+# variable the server reads, so changing the port cannot break the check.
+HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=10 \
+  CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('GIFT_GENIUS_API_PORT', '8001') + '/api/health', timeout=2)"]
+
 # The command the package installs (gift-genius-api). Model settings such as
 # OLLAMA_BASE_URL are NOT baked in. They are passed when the container starts.
 CMD ["gift-genius-api"]
