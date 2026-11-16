@@ -247,3 +247,60 @@ def test_api_deployment_reads_its_settings_from_the_configmap():
         if "configMapRef" in source
     ]
     assert config_names == [CONFIG_NAME]
+
+
+# ---------------------------------------------------------------------------
+# Health probes: how Kubernetes asks each pod whether it is working.
+# ---------------------------------------------------------------------------
+
+
+def get_http_probe(container: dict[str, Any], kind: str) -> dict[str, Any]:
+    """Return the HTTP check for "readinessProbe" or "livenessProbe", or fail with a clear message."""
+    assert kind in container, f"container has no {kind}"
+    probe = container[kind]
+    assert "httpGet" in probe, f"{kind} should be an HTTP check"
+    return probe
+
+
+def test_api_probes_ask_the_health_endpoint():
+    """Protects the api pod from taking traffic before it can answer.
+
+    The back end already answers GET /api/health. Both probes must use that
+    path on the container port. The check only proves the process responds. It
+    does not call Ollama on purpose: a slow model must never make Kubernetes
+    restart a healthy pod.
+    """
+    container = only_container(find_one(load_documents(API_MANIFEST), "Deployment"))
+    for kind in ("readinessProbe", "livenessProbe"):
+        check = get_http_probe(container, kind)["httpGet"]
+        assert check["path"] == "/api/health"
+        assert check["port"] == API_PORT
+
+
+def test_web_probes_ask_for_the_home_page():
+    """Protects the web pods from taking traffic before nginx can serve the page.
+
+    nginx serves index.html at "/". If the file is missing, "/" returns a 404
+    and the probe fails, which is the signal we want. The probe asks nginx only,
+    never the api, so a slow back end cannot mark the web pods unhealthy.
+    """
+    container = only_container(find_one(load_documents(WEB_MANIFEST), "Deployment"))
+    for kind in ("readinessProbe", "livenessProbe"):
+        check = get_http_probe(container, kind)["httpGet"]
+        assert check["path"] == "/"
+        assert check["port"] == WEB_PORT
+
+
+def test_liveness_never_starts_checking_before_readiness():
+    """Protects a slow starting pod from being killed.
+
+    Liveness restarts the pod when it fails. If it began checking earlier than
+    readiness, a pod that is merely still starting could be restarted again and
+    again, a loop that never lets it finish. So liveness must wait at least as
+    long as readiness before its first check.
+    """
+    for manifest in (API_MANIFEST, WEB_MANIFEST):
+        container = only_container(find_one(load_documents(manifest), "Deployment"))
+        ready = get_http_probe(container, "readinessProbe").get("initialDelaySeconds", 0)
+        live = get_http_probe(container, "livenessProbe").get("initialDelaySeconds", 0)
+        assert live >= ready, f"{manifest.name}: liveness starts before readiness"

@@ -9,7 +9,7 @@
 # and the specialist agents run inside the container exactly as they do today.
 #
 # The model settings live in k8s/configmap.yaml and are loaded below with
-# envFrom. Not here yet, on purpose: the health probes (a later piece).
+# envFrom. The health probes (readiness and liveness) ask GET /api/health.
 #
 # manifest tests: backend/tests/test_k8s_manifests.py
 apiVersion: apps/v1
@@ -50,6 +50,29 @@ spec:
           envFrom:
             - configMapRef:
                 name: gift-genius-config
+          # Readiness: "can you take traffic now?" While this fails, the Service
+          # leaves the pod out. The pod keeps running and is not restarted.
+          # It asks the back end only. It does not call Ollama, so a slow model cannot mark the pod not ready.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            # Wait before the first check so a starting pod is not judged early.
+            initialDelaySeconds: 5
+            # Check every 10 seconds. Three misses in a row mark the pod not ready.
+            periodSeconds: 10
+            failureThreshold: 3
+          # Liveness: "are you stuck?" Three misses in a row make Kubernetes
+          # restart the pod. It starts later than readiness on purpose, so a
+          # pod that is only slow to start is not restarted in a loop.
+          # The check only proves the process answers. A busy model call must never cause a restart.
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           ports:
             # The port the back end listens on inside the container. This line
             # is documentation for people and tools. It does not open anything.

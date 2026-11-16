@@ -11,7 +11,7 @@
 # api Service address. That address stays the same when an api pod is
 # replaced, so nginx does not need to restart.
 #
-# Not here yet, on purpose: health probes (a later piece).
+# The health probes (readiness and liveness) ask nginx for the home page.
 #
 # manifest tests: backend/tests/test_k8s_manifests.py
 apiVersion: apps/v1
@@ -46,6 +46,29 @@ spec:
           # default, and that fails for a local image. IfNotPresent says: use
           # the copy on this machine first.
           imagePullPolicy: IfNotPresent
+          # Readiness: "can you take traffic now?" While this fails, the Service
+          # leaves the pod out. The pod keeps running and is not restarted.
+          # It asks nginx for the home page only, never the api, so a slow back end cannot mark web pods not ready.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            # Wait before the first check so a starting pod is not judged early.
+            initialDelaySeconds: 5
+            # Check every 10 seconds. Three misses in a row mark the pod not ready.
+            periodSeconds: 10
+            failureThreshold: 3
+          # Liveness: "are you stuck?" Three misses in a row make Kubernetes
+          # restart the pod. It starts later than readiness on purpose, so a
+          # pod that is only slow to start is not restarted in a loop.
+          # If index.html is missing, "/" returns 404 and the probe fails, which is the signal we want.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           ports:
             # nginx listens on 8080 inside the container. The unprivileged
             # nginx image cannot use port 80. This line is documentation for
