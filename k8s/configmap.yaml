@@ -1,0 +1,24 @@
+# Model settings for the Gift Genius back end, kept outside the image.
+#
+# A ConfigMap is a named set of plain text settings. Kubernetes hands them to a
+# pod as environment variables, so changing a setting means editing this file
+# and applying it, with no image rebuild. That is the same job the Compose
+# "environment:" block does today.
+#
+# Nothing here is a model or an agent. It is plain configuration. None of these
+# values is a secret. A real key would go in a Secret, never in this file.
+#
+# manifest tests: backend/tests/test_k8s_manifests.py
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gift-genius-config
+data:
+  # Tells the back end to use a local Ollama model and ask for no API key.
+  MODEL_SOURCE: "ollama"
+  # Ollama runs on the Mac, outside the cluster. Inside a pod "localhost" means
+  # the pod itself, so the pod must use the name Docker Desktop gives the Mac.
+  # This works on Docker Desktop only. A cloud cluster needs a different value.
+  OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+  # The model Ollama serves. Run "ollama pull" for it on the Mac first.
+  OLLAMA_MODEL: "qwen3:4b-instruct-2507-q4_K_M"

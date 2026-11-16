@@ -18,6 +18,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 API_MANIFEST = REPO_ROOT / "k8s" / "api.yaml"
 WEB_MANIFEST = REPO_ROOT / "k8s" / "web.yaml"
+CONFIG_MANIFEST = REPO_ROOT / "k8s" / "configmap.yaml"
 
 # The back end listens on this port inside its container. nginx in the web pods
 # reaches it as http://api:8001, so the Service must publish the same port.
@@ -205,3 +206,44 @@ def test_web_deployment_asks_for_two_pods():
     """
     deployment = find_one(load_documents(WEB_MANIFEST), "Deployment")
     assert deployment["spec"]["replicas"] == 2
+
+
+# ---------------------------------------------------------------------------
+# The settings file (k8s/configmap.yaml): model settings kept outside the image.
+# ---------------------------------------------------------------------------
+
+# The name the api Deployment uses to find its settings. Both files must agree.
+CONFIG_NAME = "gift-genius-config"
+
+
+def test_configmap_holds_the_three_model_settings():
+    """Protects the settings the back end reads at start up.
+
+    client.py reads MODEL_SOURCE, OLLAMA_BASE_URL and OLLAMA_MODEL from the
+    environment. Without MODEL_SOURCE=ollama the back end looks for an API key
+    and fails. The base URL must point at the Mac, because Ollama runs outside
+    the cluster and "localhost" inside a pod means the pod itself. These are not
+    secrets, so a ConfigMap (plain text settings) is the right home for them.
+    """
+    config_map = find_one(load_documents(CONFIG_MANIFEST), "ConfigMap")
+    assert config_map["metadata"]["name"] == CONFIG_NAME
+    data = config_map["data"]
+    assert data["MODEL_SOURCE"] == "ollama"
+    assert data["OLLAMA_BASE_URL"] == "http://host.docker.internal:11434"
+    assert data["OLLAMA_MODEL"].strip() != ""
+
+
+def test_api_deployment_reads_its_settings_from_the_configmap():
+    """Protects the link between the pod and its settings.
+
+    A ConfigMap that no pod points at does nothing, and a wrong name fails
+    silently until the pod cannot reach the model. This checks the api
+    container loads every key from the ConfigMap with the matching name.
+    """
+    container = only_container(find_one(load_documents(API_MANIFEST), "Deployment"))
+    config_names = [
+        source["configMapRef"]["name"]
+        for source in container.get("envFrom", [])
+        if "configMapRef" in source
+    ]
+    assert config_names == [CONFIG_NAME]

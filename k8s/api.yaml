@@ -8,9 +8,8 @@
 # reads it and decides where the pod runs and when to restart it. The router
 # and the specialist agents run inside the container exactly as they do today.
 #
-# Not here yet, on purpose: the model settings (a ConfigMap, a later piece) and
-# the health probes (also a later piece). Until the settings arrive, the pod
-# starts but cannot reach Ollama, so a real search will fail.
+# The model settings live in k8s/configmap.yaml and are loaded below with
+# envFrom. Not here yet, on purpose: the health probes (a later piece).
 #
 # manifest tests: backend/tests/test_k8s_manifests.py
 apiVersion: apps/v1
@@ -44,6 +43,13 @@ spec:
           # default, and that fails for a local image. IfNotPresent says: use
           # the copy on this machine first.
           imagePullPolicy: IfNotPresent
+          # Load every key in the ConfigMap named below as an environment
+          # variable. The name must match k8s/configmap.yaml. If it does not,
+          # the pod fails to start. Apply the ConfigMap before the Deployment,
+          # because the pod cannot start without it.
+          envFrom:
+            - configMapRef:
+                name: gift-genius-config
           ports:
             # The port the back end listens on inside the container. This line
             # is documentation for people and tools. It does not open anything.
