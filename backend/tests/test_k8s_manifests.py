@@ -17,10 +17,14 @@ import yaml
 # This file lives at backend/tests/, so the repository root is two levels up.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 API_MANIFEST = REPO_ROOT / "k8s" / "api.yaml"
+WEB_MANIFEST = REPO_ROOT / "k8s" / "web.yaml"
 
 # The back end listens on this port inside its container. nginx in the web pods
 # reaches it as http://api:8001, so the Service must publish the same port.
 API_PORT = 8001
+
+# nginx in the web image listens on 8080 (the unprivileged nginx image cannot use 80).
+WEB_PORT = 8080
 
 
 def load_documents(path: Path) -> list[dict[str, Any]]:
@@ -41,10 +45,10 @@ def find_one(documents: list[dict[str, Any]], kind: str) -> dict[str, Any]:
     return matches[0]
 
 
-def api_container(deployment: dict[str, Any]) -> dict[str, Any]:
-    """Return the one container in the Deployment's pod template."""
+def only_container(deployment: dict[str, Any]) -> dict[str, Any]:
+    """Return the one container in a Deployment's pod template."""
     containers = deployment["spec"]["template"]["spec"]["containers"]
-    assert len(containers) == 1, "the api pod should run exactly one container"
+    assert len(containers) == 1, "the pod should run exactly one container"
     return containers[0]
 
 
@@ -70,13 +74,13 @@ def test_service_is_named_api_and_stays_inside_the_cluster():
     assert port["targetPort"] == API_PORT
 
 
-def test_service_selector_matches_the_pod_labels():
-    """Protects the silent failure: a Service whose label matches no pod sends traffic nowhere.
+def assert_selectors_line_up(documents: list[dict[str, Any]]) -> None:
+    """Check that the Deployment, its pod template and the Service all use the same label.
 
-    Three labels must agree. The Deployment selects pods by label, the pod
-    template carries that label, and the Service selects the same label.
+    The Deployment selects pods by label, the pod template carries that label,
+    and the Service selects the same label. If any of the three is mistyped,
+    Kubernetes accepts the file and nothing errors: traffic just goes nowhere.
     """
-    documents = load_documents(API_MANIFEST)
     deployment = find_one(documents, "Deployment")
     service = find_one(documents, "Service")
     pod_labels = deployment["spec"]["template"]["metadata"]["labels"]
@@ -89,6 +93,11 @@ def test_service_selector_matches_the_pod_labels():
     assert service_selector.items() <= pod_labels.items()
 
 
+def test_service_selector_matches_the_pod_labels():
+    """Protects the silent failure: an api Service whose label matches no pod sends traffic nowhere."""
+    assert_selectors_line_up(load_documents(API_MANIFEST))
+
+
 def test_deployment_runs_the_local_api_image_on_the_right_port():
     """Protects the image name, the port and the pull policy.
 
@@ -97,7 +106,7 @@ def test_deployment_runs_the_local_api_image_on_the_right_port():
     which fails because this image exists only on the Mac. IfNotPresent tells
     it to use the local copy first.
     """
-    container = api_container(find_one(load_documents(API_MANIFEST), "Deployment"))
+    container = only_container(find_one(load_documents(API_MANIFEST), "Deployment"))
     assert container["image"] == "gift-genius-api:latest"
     assert container["imagePullPolicy"] == "IfNotPresent"
     assert {p["containerPort"] for p in container["ports"]} == {API_PORT}
@@ -120,7 +129,79 @@ def test_no_secret_looking_settings_in_the_manifest():
     them is a secret. If a variable with a key-like name shows up here, someone
     is about to commit a credential.
     """
-    container = api_container(find_one(load_documents(API_MANIFEST), "Deployment"))
+    container = only_container(find_one(load_documents(API_MANIFEST), "Deployment"))
     names = [item["name"].upper() for item in container.get("env", [])]
     for word in ("KEY", "TOKEN", "SECRET", "PASSWORD"):
         assert not any(word in name for name in names), f"{word} found in env names {names}"
+
+
+# ---------------------------------------------------------------------------
+# The web manifest (k8s/web.yaml): nginx serving the React app, two pods.
+# ---------------------------------------------------------------------------
+
+
+def test_web_manifest_holds_one_deployment_and_one_service():
+    """Protects the shape of the web file: one Deployment (the pods) and one Service (the front door)."""
+    kinds = sorted(doc["kind"] for doc in load_documents(WEB_MANIFEST))
+    assert kinds == ["Deployment", "Service"]
+
+
+def test_web_service_is_named_web_and_stays_inside_the_cluster():
+    """Protects the rule that nothing is exposed to the network.
+
+    The web page forwards /api to a back end with no authentication, so putting
+    the web Service on the network would expose that API too. ClusterIP keeps it
+    inside the cluster, and we reach it from the Mac with kubectl port-forward,
+    which binds to 127.0.0.1 only. A customer would use an Ingress or a load
+    balancer with a sign-in in front instead.
+    """
+    service = find_one(load_documents(WEB_MANIFEST), "Service")
+    assert service["metadata"]["name"] == "web"
+    assert service["spec"].get("type", "ClusterIP") == "ClusterIP"
+    (port,) = service["spec"]["ports"]
+    assert port["port"] == WEB_PORT
+    assert port["targetPort"] == WEB_PORT
+
+
+def test_web_service_selector_matches_the_pod_labels():
+    """Protects the silent failure: a web Service whose label matches no pod sends traffic nowhere."""
+    assert_selectors_line_up(load_documents(WEB_MANIFEST))
+
+
+def test_web_and_api_use_different_labels():
+    """Protects against the classic copy and paste mistake.
+
+    The web file is written by copying the api file. If the label "app: api"
+    survives the copy, the web Service would send page requests to the back end
+    pods, and the Deployments would fight over each other's pods.
+    """
+    web = find_one(load_documents(WEB_MANIFEST), "Deployment")
+    api = find_one(load_documents(API_MANIFEST), "Deployment")
+    web_labels = web["spec"]["template"]["metadata"]["labels"]
+    api_labels = api["spec"]["template"]["metadata"]["labels"]
+    assert web_labels["app"] == "web"
+    assert web_labels["app"] != api_labels["app"]
+
+
+def test_web_deployment_runs_the_local_web_image_on_the_right_port():
+    """Protects the image name, the port and the pull policy for the web pods.
+
+    The image is the one Compose already builds, gift-genius-web:latest. As with
+    the api, IfNotPresent makes Kubernetes use the copy on this Mac instead of
+    trying to pull a ":latest" image from the internet.
+    """
+    container = only_container(find_one(load_documents(WEB_MANIFEST), "Deployment"))
+    assert container["image"] == "gift-genius-web:latest"
+    assert container["imagePullPolicy"] == "IfNotPresent"
+    assert {p["containerPort"] for p in container["ports"]} == {WEB_PORT}
+
+
+def test_web_deployment_asks_for_two_pods():
+    """Protects the replica count. Web runs two pods so we can practice scaling and self-healing.
+
+    nginx serving static files is cheap, so a second copy costs almost nothing.
+    Two pods also show the Service sharing traffic and a pod being replaced
+    while the page stays up.
+    """
+    deployment = find_one(load_documents(WEB_MANIFEST), "Deployment")
+    assert deployment["spec"]["replicas"] == 2

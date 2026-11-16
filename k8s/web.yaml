@@ -1,0 +1,73 @@
+# Kubernetes objects for the Gift Genius web front end (nginx plus the built
+# React app).
+#
+# Same two objects as k8s/api.yaml, separated by "---":
+#   1. A Deployment: "keep this many copies of this container running".
+#   2. A Service: a fixed name and address in front of those pods.
+#
+# Nothing here is a model or an agent. It is plain configuration. nginx serves
+# the page and forwards /api requests to the api Service by its name, "api",
+# exactly as it does under Docker Compose. Cluster DNS turns that name into the
+# api Service address. That address stays the same when an api pod is
+# replaced, so nginx does not need to restart.
+#
+# Not here yet, on purpose: health probes (a later piece).
+#
+# manifest tests: backend/tests/test_k8s_manifests.py
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  # Two pods so we can practice scaling and self-healing. nginx serving static
+  # files is cheap, so the second copy costs almost nothing.
+  replicas: 2
+  # How the Deployment finds the pods it owns: any pod with this label.
+  selector:
+    matchLabels:
+      app: web
+  # The pod blueprint. The label below MUST match the selector above and the
+  # Service selector further down, and it MUST differ from the api label. If
+  # "app: api" survived a copy and paste, the web Service would send page
+  # requests to the back end. The manifest tests check all of this.
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          # The same image Compose builds. It exists only on this Mac, never on
+          # a registry.
+          image: gift-genius-web:latest
+          # With a ":latest" tag Kubernetes tries to pull from the internet by
+          # default, and that fails for a local image. IfNotPresent says: use
+          # the copy on this machine first.
+          imagePullPolicy: IfNotPresent
+          ports:
+            # nginx listens on 8080 inside the container. The unprivileged
+            # nginx image cannot use port 80. This line is documentation for
+            # people and tools. It does not open anything.
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  # ClusterIP means reachable only from inside the cluster. The web page
+  # forwards /api to a back end with no authentication, so exposing this
+  # Service to the network would expose that API too. From the Mac we reach it
+  # with "kubectl port-forward", which binds to 127.0.0.1 only. A real
+  # deployment would put an Ingress or a load balancer, with a sign-in, in
+  # front instead.
+  type: ClusterIP
+  # Send traffic to any pod with this label, and share it between them.
+  selector:
+    app: web
+  ports:
+    # port is what callers use. targetPort is the port inside the pod.
+    - port: 8080
+      targetPort: 8080
