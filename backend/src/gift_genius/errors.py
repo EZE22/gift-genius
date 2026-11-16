@@ -30,8 +30,15 @@ def describe_error(error: Exception) -> str:
         return "The Claude API key in .env was rejected."
     if isinstance(error, anthropic.NotFoundError):
         return "The model in .env wasn't found. Check the model and ROUTER_MODEL settings."
+    # The timeout check must come first. In the anthropic library a timeout is a
+    # kind of connection error, so the check below would catch it and the user
+    # would be told the server is unreachable when it was only slow. The wording
+    # names no provider because the same sentence is shown for Claude, Foundry
+    # and a local Ollama model.
+    if isinstance(error, anthropic.APITimeoutError):
+        return "The model took too long to answer. Try again, or use a smaller or faster model."
     if isinstance(error, anthropic.APIConnectionError):
-        return "Could not reach the Claude API. Check the connection and try again."
+        return "Could not reach the model service. Check that it is running and try again."
     if isinstance(error, anthropic.APIStatusError):
         return f"The Claude API returned an error ({error.status_code}). Try again in a moment."
     return GENERIC_MESSAGE
