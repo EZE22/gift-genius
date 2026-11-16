@@ -16,9 +16,6 @@ from dotenv import load_dotenv
 
 from .agent import MODEL
 
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3:8b"
-
 # A request returns only once the whole reply is written (no streaming), so the
 # read timeout must cover a full reply. One retry keeps a stalled network short.
 TIMEOUT = anthropic.Timeout(300.0, connect=10.0)
@@ -29,8 +26,16 @@ MAX_RETRIES = 1
 # matters in a container: inside a Docker container or a Kubernetes pod,
 # "localhost" is the container itself, not the machine that runs Ollama, so the
 # address has to be a setting and never a fixed value in the code.
+#
+# The default model is a small instruct model that does not "think" before it
+# answers. A thinking model (such as plain qwen3) wrote thousands of reasoning
+# tokens before every agent step. On an 8 GB Mac that took 4 to 5 minutes per
+# call and hit the timeout above. This model is about 2.5 GB, so it also fits
+# next to other apps. A reader might assume a bigger model is always better
+# here: it is not, unless the machine has the memory and the speed for it.
+# Set OLLAMA_MODEL to use a different one.
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_OLLAMA_MODEL = "qwen3:8b"
+DEFAULT_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 # backend/src/gift_genius/client.py -> the repository root
 ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
