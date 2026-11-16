@@ -126,6 +126,66 @@ npm --prefix frontend/web run dev
 The API listens on 127.0.0.1 only and allows 3 searches at once. It has no authentication, so
 don't expose it beyond this machine without adding some.
 
+## Docker
+
+The whole app can run in two containers started by Docker Compose, with Ollama still running on your machine outside Docker. Nothing in the containers is a model: the images and the Compose file are plain configuration.
+
+```mermaid
+flowchart LR
+    B["Browser<br/>127.0.0.1:8080"]
+
+    subgraph DC["Docker Compose, project gift-genius"]
+        W["web container<br/>nginx on port 8080<br/>Serves the page, forwards /api, streams results"]
+        subgraph AC["api container, port 8001, not published"]
+            A["FastAPI<br/>Runs one gift search"]
+            R["Router<br/>One model call picks a category<br/>Code picks the specialist"]
+            S["Specialist<br/>Autonomous: chooses its own searches"]
+            V["Catalog check<br/>Gifts must exist and fit the budget"]
+        end
+    end
+
+    O["Ollama on the host<br/>Local model<br/>host.docker.internal:11434"]
+
+    B -->|"Page and /api requests"| W
+    W -->|"/api proxied, streamed"| A
+    A --> R
+    R -->|"Passes request"| S
+    S -->|"Returns 3 gifts"| V
+    R -.->|"Model call"| O
+    S -.->|"Model calls"| O
+
+    classDef llm fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef agent fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef code fill:#F1EFE8,stroke:#5F5E5A,color:#444441
+    class R llm
+    class S agent
+    class B,W,A,V,O code
+```
+
+**Legend:** green is a single model call, purple is an autonomous agent, and gray is code or configuration. Solid arrows pass control or data, and dotted arrows are calls to the model. The web container starts only after the api container reports healthy, because nginx looks up the name `api` when it starts.
+
+### Run with Docker Compose
+
+You need Docker Desktop and Ollama running on your machine. Pull the default model once:
+
+```bash
+ollama pull qwen3:4b-instruct-2507-q4_K_M
+```
+
+Then start both containers from the repository root:
+
+```bash
+docker compose up --build
+```
+
+Open http://127.0.0.1:8080. Stop with Ctrl+C, then remove the containers:
+
+```bash
+docker compose down
+```
+
+No `.env` file is needed for the defaults. To change the model or the port, copy `.env.example` to `.env` and set `OLLAMA_MODEL` or `WEB_PORT`. Only the web port is published, and only on 127.0.0.1. The API has no authentication, so it stays inside the Compose network. These steps are for Docker Desktop. Docker on Linux needs an extra setting before the containers can reach Ollama on the host.
+
 ## API
 
 `POST /api/gift-searches` with `{"description": "...", "budget": 50}` streams Server-Sent Events:
