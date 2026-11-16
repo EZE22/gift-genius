@@ -65,10 +65,10 @@ flowchart TD
     M -->|"Settings: client, model, router model, claude_features"| W["find_gifts()<br/>Workflow: code decides the path"]
     W --> R["LLM router<br/>One call, one label<br/>Built: no effort setting on Ollama"]
     W --> A["Specialist agent<br/>Model chooses tools and when to stop<br/>Built: Claude-only settings only on Claude"]
-    A <-->|"Messages API"| MD["Claude or Ollama qwen3:8b"]
+    A <-->|"Messages API"| MD["Claude or Ollama (default: qwen3 4b instruct)"]
     R <-->|"Messages API"| MD
     A --> V["Your code checks the shortlist<br/>Built, unchanged"]
-    L["Live check on qwen3:8b<br/>Planned: token limit, tool cap, speed"] -.-> MD
+    L["Live check on a local model<br/>Built: found that a thinking model is too slow on 8 GB"] -.-> MD
     classDef llm fill:#E1F5EE,stroke:#0F6E56,color:#085041
     classDef agent fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef code fill:#F1EFE8,stroke:#5F5E5A,color:#444441
@@ -76,10 +76,9 @@ flowchart TD
     class R llm
     class A agent
     class E,M,W,MD,V,L code
-    class L planned
 ```
 
-The dashed box is planned. Every other box is built.
+Every box is built.
 
 ## Setup
 

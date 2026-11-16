@@ -1,0 +1,56 @@
+# Runs the Gift Genius tests on every pull request and every push to main.
+#
+# Nothing here calls a model. The tests use a scripted fake model, so this
+# workflow needs no API key, no secrets and no running Ollama. If a secret is
+# ever needed, store it as a repository secret and never print it.
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The workflow only reads the repository. Giving it no more than that limits
+# the damage if a step is ever compromised.
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the older run, so the check on screen
+# always belongs to the latest commit.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    # A hung test should fail the check, not wait for the six hour default.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # One pinned version, so a new Python release cannot turn the check red
+      # on its own. The code allows 3.10 or newer, and this run is the proof
+      # that it works on 3.12.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            backend/pyproject.toml
+            frontend/cli/pyproject.toml
+
+      # Only the two Python packages and their test extras. The web front end
+      # and its npm packages are not needed for these tests.
+      - name: Install the packages the tests need
+        run: python -m pip install -e "backend[dev]" -e "frontend/cli[dev]"
+
+      # Each package limits collection to its own tests folder in pyproject.toml.
+      # Use "python -m pytest", not "pytest", so the run uses this Python.
+      - name: Back end tests
+        working-directory: backend
+        run: python -m pytest -q
+
+      - name: CLI tests
+        working-directory: frontend/cli
+        run: python -m pytest -q
