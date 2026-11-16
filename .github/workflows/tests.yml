@@ -54,3 +54,30 @@ jobs:
       - name: CLI tests
         working-directory: frontend/cli
         run: python -m pytest -q
+
+  # Runs the web front end tests. Plain code, no model: the tests use
+  # jsdom, a fake browser, so no API key or running backend is needed.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # One pinned Node version, matching local development. The
+      # dependencies need Node 20.19 or newer, and 22 is a current LTS.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/web/package-lock.json
+
+      # "npm ci" installs exactly what package-lock.json says and fails if
+      # the lock file and package.json disagree. "npm install" would not.
+      - name: Install the packages the tests need
+        working-directory: frontend/web
+        run: npm ci
+
+      # "vitest run" runs once and exits. Plain "vitest" would wait for changes.
+      - name: Web tests
+        working-directory: frontend/web
+        run: npm test
