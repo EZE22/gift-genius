@@ -89,3 +89,17 @@ jobs:
       - name: Type check
         working-directory: frontend/web
         run: npm run typecheck
+
+  # Builds the back end image and checks that the container answers
+  # /api/health. Plain code, no model: the script never calls one, so no key
+  # and no Ollama are needed. It is the same script you run on your Mac.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub's Ubuntu runners already have Docker and curl installed, so no
+      # setup step is needed. A failure prints the container log in this step.
+      - name: Docker smoke test
+        run: scripts/docker-smoke-test.sh
