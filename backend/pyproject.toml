@@ -25,6 +25,7 @@ dev = [
     "gift-genius-backend[api]",
     "pytest>=9.2.0",
     "httpx>=0.28",  # FastAPI's TestClient
+    "pyyaml>=6.0",  # reads the Kubernetes manifest files in test_k8s_manifests.py
 ]
 
 [project.scripts]

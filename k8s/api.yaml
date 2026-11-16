@@ -1,0 +1,97 @@
+# Kubernetes objects for the Gift Genius back end (the api).
+#
+# This file holds two objects, separated by "---":
+#   1. A Deployment: "keep this many copies of this container running".
+#   2. A Service: a fixed name and address in front of those pods.
+#
+# Nothing here is a model or an agent. It is plain configuration. Kubernetes
+# reads it and decides where the pod runs and when to restart it. The router
+# and the specialist agents run inside the container exactly as they do today.
+#
+# The model settings live in k8s/configmap.yaml and are loaded below with
+# envFrom. The health probes (readiness and liveness) ask GET /api/health.
+#
+# manifest tests: backend/tests/test_k8s_manifests.py
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels:
+    app: api
+spec:
+  # One pod on purpose. Ollama on an 8 GB Mac is the bottleneck, so more api
+  # pods would only queue more model calls.
+  replicas: 1
+  # How the Deployment finds the pods it owns: any pod with this label.
+  selector:
+    matchLabels:
+      app: api
+  # The pod blueprint. The label below MUST match the selector above and the
+  # Service selector further down. If one is mistyped, nothing errors: traffic
+  # just goes nowhere. The manifest tests check all three.
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          # The same image Compose builds. It exists only on this Mac, never on
+          # a registry.
+          image: gift-genius-api:latest
+          # With a ":latest" tag Kubernetes tries to pull from the internet by
+          # default, and that fails for a local image. IfNotPresent says: use
+          # the copy on this machine first.
+          imagePullPolicy: IfNotPresent
+          # Load every key in the ConfigMap named below as an environment
+          # variable. The name must match k8s/configmap.yaml. If it does not,
+          # the pod fails to start. Apply the ConfigMap before the Deployment,
+          # because the pod cannot start without it.
+          envFrom:
+            - configMapRef:
+                name: gift-genius-config
+          # Readiness: "can you take traffic now?" While this fails, the Service
+          # leaves the pod out. The pod keeps running and is not restarted.
+          # It asks the back end only. It does not call Ollama, so a slow model cannot mark the pod not ready.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            # Wait before the first check so a starting pod is not judged early.
+            initialDelaySeconds: 5
+            # Check every 10 seconds. Three misses in a row mark the pod not ready.
+            periodSeconds: 10
+            failureThreshold: 3
+          # Liveness: "are you stuck?" Three misses in a row make Kubernetes
+          # restart the pod. It starts later than readiness on purpose, so a
+          # pod that is only slow to start is not restarted in a loop.
+          # The check only proves the process answers. A busy model call must never cause a restart.
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          ports:
+            # The port the back end listens on inside the container. This line
+            # is documentation for people and tools. It does not open anything.
+            - containerPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  # ClusterIP means reachable only from inside the cluster. The API has no
+  # authentication, so it must never be exposed outside. The name "api" is what
+  # nginx in the web pods already uses: http://api:8001.
+  type: ClusterIP
+  # Send traffic to any pod with this label. When a pod dies and a new one
+  # starts with the same label, the Service picks it up automatically.
+  selector:
+    app: api
+  ports:
+    # port is what callers use. targetPort is the port inside the pod.
+    - port: 8001
+      targetPort: 8001
