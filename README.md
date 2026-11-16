@@ -53,6 +53,34 @@ A few details:
 - The retry gets a fresh budget of 6 tool calls.
 - The catalog is `backend/src/gift_genius/data/catalog.json`. The tools read only this file.
 
+### Model source (planned)
+
+Today the code only works with Claude. This change lets one setting choose a local Ollama model
+instead, so Gift Genius can run with no API key. The address and model name come from
+environment variables, so the same image can later run in a container or a Kubernetes pod,
+where `localhost` is not the machine that runs Ollama.
+
+```mermaid
+flowchart TD
+    E[".env or container environment<br/>MODEL_SOURCE, OLLAMA_BASE_URL, OLLAMA_MODEL"] --> M["make_client()<br/>Planned change<br/>Builds the client and the settings"]
+    M -->|"Settings: client, model, router model, claude_features"| W["find_gifts()<br/>Workflow: code decides the path"]
+    W --> R["LLM router<br/>One call, one label<br/>Planned change: no effort setting on Ollama"]
+    W --> A["Specialist agent<br/>Model chooses tools and when to stop<br/>Planned change: Claude-only settings only on Claude"]
+    A <-->|"Messages API"| MD["Claude or Ollama qwen3:8b"]
+    R <-->|"Messages API"| MD
+    A --> V["Your code checks the shortlist<br/>Built, unchanged"]
+    classDef llm fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef agent fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef code fill:#F1EFE8,stroke:#5F5E5A,color:#444441
+    classDef planned stroke-dasharray: 5 5
+    class R llm
+    class A agent
+    class E,M,W,MD,V code
+    class M,R,A planned
+```
+
+Dashed boxes are planned changes. Plain boxes are built and stay as they are.
+
 ## Setup
 
 You need Python 3.10+ and Node 20+.
