@@ -59,7 +59,11 @@ def settings(script, model="main-model", router_model="router-model"):
 
     server_fallbacks is off so tests hit the plain messages.create path.
     """
-    return Settings(ScriptedClient(script), model, router_model, False)
+    # The scripted client stands in for Claude, so Claude-only features stay on.
+    # Passed by name so a reader can see which flag is which.
+    return Settings(
+        ScriptedClient(script), model, router_model, server_fallbacks=False, claude_features=True
+    )
 
 
 def tool_results(request):
