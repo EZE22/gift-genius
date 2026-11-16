@@ -47,8 +47,13 @@ def reply(gifts):
 
 
 def factory(script):
-    """A settings_factory the CLI can call instead of reading .env."""
-    return lambda: Settings(ScriptedClient(script), "main", "router", False)
+    """A settings_factory the CLI can call instead of reading .env.
+
+    claude_features is passed by name and set to True because this fake plays a
+    Claude client. Settings gained that field when Ollama support was added, and
+    a missing value here made every CLI search fail with exit code 1.
+    """
+    return lambda: Settings(ScriptedClient(script), "main", "router", False, claude_features=True)
 
 
 def answers(*values):
