@@ -108,6 +108,17 @@ def test_request_shape():
     assert "betas" not in request and "fallbacks" not in request
 
 
+def test_without_claude_features_the_request_has_no_claude_only_settings():
+    """Ollama does not understand tool_choice or output_config, so with claude_features
+    off neither is sent. The tools and the rest of the request stay the same."""
+    client = ScriptedClient([resp(text("ok"))])
+    run(client, claude_features=False)
+    _, request = client.requests[0]
+    assert "tool_choice" not in request
+    assert "output_config" not in request
+    assert request["tools"] == [ADD_TOOL]
+
+
 def test_server_fallbacks_use_the_beta_api():
     """server_fallbacks switches the call onto the beta endpoint with the fallback header."""
     client = ScriptedClient([resp(text("ok"))])
