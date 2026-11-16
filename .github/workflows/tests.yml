@@ -118,3 +118,18 @@ jobs:
       # A failure prints both containers' logs in this step.
       - name: Docker web smoke test
         run: scripts/docker-web-smoke-test.sh
+
+  # Starts the whole app with docker compose and checks that both services are
+  # healthy, the page and /api/health answer through the web port, and only
+  # the web port is published. Plain code, no model: nothing here calls one,
+  # so no key and no Ollama are needed. It is the same script you run on your Mac.
+  docker-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub's Ubuntu runners already have Docker, Docker Compose and curl.
+      # A failure prints both services' logs in this step.
+      - name: Docker Compose smoke test
+        run: scripts/docker-compose-smoke-test.sh
