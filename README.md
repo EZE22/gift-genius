@@ -164,6 +164,28 @@ flowchart LR
 
 **Legend:** green is a single model call, purple is an autonomous agent, and gray is code or configuration. Solid arrows pass control or data, and dotted arrows are calls to the model. The web container starts only after the api container reports healthy, because nginx looks up the name `api` when it starts.
 
+### Run with Docker Compose
+
+You need Docker Desktop and Ollama running on your machine. Pull the default model once:
+
+```bash
+ollama pull qwen3:4b-instruct-2507-q4_K_M
+```
+
+Then start both containers from the repository root:
+
+```bash
+docker compose up --build
+```
+
+Open http://127.0.0.1:8080. Stop with Ctrl+C, then remove the containers:
+
+```bash
+docker compose down
+```
+
+No `.env` file is needed for the defaults. To change the model or the port, copy `.env.example` to `.env` and set `OLLAMA_MODEL` or `WEB_PORT`. Only the web port is published, and only on 127.0.0.1. The API has no authentication, so it stays inside the Compose network. These steps are for Docker Desktop. Docker on Linux needs an extra setting before the containers can reach Ollama on the host.
+
 ## API
 
 `POST /api/gift-searches` with `{"description": "...", "budget": 50}` streams Server-Sent Events:
