@@ -51,6 +51,19 @@ def test_foundry_needs_a_base_url(clean_env):
         client.make_client()
 
 
+def test_ollama_needs_no_key_and_uses_local_defaults(clean_env):
+    """MODEL_SOURCE=ollama builds a client with no API key, aimed at local Ollama,
+    with every Claude-only feature switched off. The default model is a small
+    non-thinking one: a thinking model made every agent call take minutes on an
+    8 GB Mac, and a larger model can still be chosen with OLLAMA_MODEL."""
+    clean_env.setenv("MODEL_SOURCE", "ollama")
+    s = client.make_client()
+    assert str(s.client.base_url).rstrip("/") == "http://localhost:11434"
+    default = "qwen3:4b-instruct-2507-q4_K_M"
+    assert (s.model, s.router_model) == (default, default)
+    assert (s.server_fallbacks, s.claude_features) == (False, False)
+
+
 def test_root_env_path_points_at_the_repository_root():
     """ROOT_ENV is the repository's .env, three parents up from this package file."""
     from pathlib import Path

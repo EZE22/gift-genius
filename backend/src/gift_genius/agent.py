@@ -98,6 +98,7 @@ def run_agent(
     check: Optional[Check] = None,
     model: str = MODEL,
     server_fallbacks: bool = True,
+    claude_features: bool = True,
     max_requests: Optional[int] = None,
     cap_message: str = DEFAULT_CAP_MESSAGE,
     on_request: Optional[Callable[[], None]] = None,
@@ -108,6 +109,9 @@ def run_agent(
     on_request() is called before each model request; on_tool_call(name, input)
     just before each tool runs. Exceptions raised by run_tool, check or the
     callbacks propagate unchanged.
+
+    claude_features=False leaves out tool_choice and output_config, which only
+    Claude understands. Use it for Ollama.
     """
     if max_requests is None:
         # A few extra turns past the tool cap: one to force the text answer,
@@ -123,16 +127,18 @@ def run_agent(
         force_text = len(calls) >= max_tool_calls
         if on_request:
             on_request()
-        params = dict(
-            max_tokens=MAX_TOKENS,
-            system=system,
-            messages=messages,
-            tools=tools,
+        # The request every model accepts: prompt, messages and tools.
+        params = dict(max_tokens=MAX_TOKENS, system=system, messages=messages, tools=tools)
+        if claude_features:
+            # Claude-only settings. Ollama rejects or ignores both, so they are sent
+            # only when the model source is Claude or Foundry.
             # Opus 5.5 rejects forced tool use; "none" (no tools) is allowed and
             # is how we force a text answer once the tool budget is spent.
-            tool_choice={"type": "none"} if force_text else {"type": "auto"},
-            output_config={"effort": EFFORT},
-        )
+            params["tool_choice"] = {"type": "none"} if force_text else {"type": "auto"}
+            params["output_config"] = {"effort": EFFORT}
+        # Without claude_features there is no way to forbid tools at the cap. The cap
+        # message in the next prompt asks for an answer, and any extra tool call gets
+        # a "Not run" error result, so the loop still ends within max_requests.
         response = _create(client, model, server_fallbacks, params)
 
         # These stop reasons are failures. A max_tokens reply can still contain

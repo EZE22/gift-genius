@@ -53,6 +53,34 @@ A few details:
 - The retry gets a fresh budget of 6 tool calls.
 - The catalog is `backend/src/gift_genius/data/catalog.json`. The tools read only this file.
 
+### Model source
+
+One setting chooses a local Ollama model instead of Claude, so Gift Genius can run with no API key. The address and model name come from
+environment variables, so the same image can later run in a container or a Kubernetes pod,
+where `localhost` is not the machine that runs Ollama.
+
+```mermaid
+flowchart TD
+    E[".env or container environment<br/>MODEL_SOURCE, OLLAMA_BASE_URL, OLLAMA_MODEL"] --> M["make_client()<br/>Built<br/>Builds the client and the settings"]
+    M -->|"Settings: client, model, router model, claude_features"| W["find_gifts()<br/>Workflow: code decides the path"]
+    W --> R["LLM router<br/>One call, one label<br/>Built: no effort setting on Ollama"]
+    W --> A["Specialist agent<br/>Model chooses tools and when to stop<br/>Built: Claude-only settings only on Claude"]
+    A <-->|"Messages API"| MD["Claude or Ollama qwen3:8b"]
+    R <-->|"Messages API"| MD
+    A --> V["Your code checks the shortlist<br/>Built, unchanged"]
+    L["Live check on qwen3:8b<br/>Planned: token limit, tool cap, speed"] -.-> MD
+    classDef llm fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef agent fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef code fill:#F1EFE8,stroke:#5F5E5A,color:#444441
+    classDef planned stroke-dasharray: 5 5
+    class R llm
+    class A agent
+    class E,M,W,MD,V,L code
+    class L planned
+```
+
+The dashed box is planned. Every other box is built.
+
 ## Setup
 
 You need Python 3.10+ and Node 20+.
@@ -71,6 +99,8 @@ Copy `.env.example` to `.env` at the repository root and fill in either `ANTHROP
 (Claude API) or the `ANTHROPIC_FOUNDRY_*` settings (Microsoft Foundry). Optionally set
 `ROUTER_MODEL` to a fast model (Claude API: e.g. `claude-haiku-5-5`; Foundry: a deployment name).
 If it's empty, the router uses the main model. `.env` is git-ignored, and the key never leaves the back end.
+
+To run with no API key, use a local model through Ollama. Set `MODEL_SOURCE=ollama` in `.env`. `OLLAMA_BASE_URL` and `OLLAMA_MODEL` are optional, and the default model is a small non-thinking one that fits an 8 GB machine. Use a model that does not think before it answers: a thinking model made each step take minutes on that hardware. If `ROUTER_MODEL` is empty, the router uses the same model. A small model can invent products, but the catalog check removes them, so you may see "No gift ideas passed the checks" instead of fake results.
 
 ## Run
 

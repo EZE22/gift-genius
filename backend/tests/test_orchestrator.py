@@ -50,6 +50,18 @@ def test_happy_path_routes_searches_checks_and_returns_three_gifts():
     assert "Budget: $50.00" in requests[1][1]["messages"][0]["content"]
 
 
+def test_ollama_flow_sends_no_claude_only_settings_in_any_request():
+    """With claude_features off, no request in the whole flow, router or agent, carries
+    tool_choice or output_config. The search still finishes with a complete shortlist."""
+    script = [resp(text("outdoors")), resp(search("hiking", 50)), resp(get("out-007")), good_reply()]
+    s = settings(script, claude_features=False)
+    result = find_gifts(s, "Loves hiking and camping", 50)
+    assert result.complete
+    for _, request in s.client.requests:
+        assert "tool_choice" not in request
+        assert "output_config" not in request
+
+
 def test_unknown_label_falls_back_to_general():
     """A label outside the three categories still runs, using the General prompt."""
     result, events, requests = run([resp(text("books")), good_reply()])

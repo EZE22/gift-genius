@@ -150,6 +150,8 @@ def find_gifts(settings, description: str, budget: float, on_event: Optional[OnE
                 max_tool_calls=MAX_TOOL_CALLS,
                 model=settings.model,
                 server_fallbacks=settings.server_fallbacks,
+                # Claude-only request settings are sent only when the model source is Claude.
+                claude_features=settings.claude_features,
             )
         except AgentError as error:
             # The loop itself failed (refusal, token limit, no accepted answer).
